@@ -1,5 +1,5 @@
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 type Props = {
   onBack: () => void;
   onLogin: (email: string, password: string) => Promise<boolean>;
@@ -8,9 +8,15 @@ type Props = {
     displayName: string,
     password: string,
   ) => Promise<{ requiresEmailConfirmation: boolean }>;
+  onResendConfirmation: (email: string) => Promise<void>;
 };
 
-export function AdminAuthPage({ onBack, onLogin, onRegister }: Props) {
+export function AdminAuthPage({
+  onBack,
+  onLogin,
+  onRegister,
+  onResendConfirmation,
+}: Props) {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -18,11 +24,15 @@ export function AdminAuthPage({ onBack, onLogin, onRegister }: Props) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [resendSeconds, setResendSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
+    setNotice("");
 
     if (!email.includes("@")) {
       setError("Email không hợp lệ.");
@@ -46,7 +56,9 @@ export function AdminAuthPage({ onBack, onLogin, onRegister }: Props) {
         }
         const result = await onRegister(email, displayName, password);
         if (result.requiresEmailConfirmation) {
-          setError("Đã gửi email xác nhận. Xác nhận email rồi quay lại đăng nhập.");
+          setNotice("Đã gửi email xác nhận. Kiểm tra cả hộp thư Spam/Quảng cáo.");
+          setAwaitingConfirmation(true);
+          setResendSeconds(60);
           setIsRegister(false);
         }
       } else {
@@ -57,6 +69,29 @@ export function AdminAuthPage({ onBack, onLogin, onRegister }: Props) {
       setLoading(false);
     }
   };
+
+  const resend = async () => {
+    if (!email.includes("@") || resendSeconds > 0) return;
+    setError("");
+    setNotice("");
+    try {
+      await onResendConfirmation(email);
+      setNotice("Đã gửi lại email xác nhận. Link mới sẽ mở đúng trang /admin.");
+      setAwaitingConfirmation(true);
+      setResendSeconds(60);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể gửi lại email xác nhận.");
+    }
+  };
+
+  useEffect(() => {
+    if (resendSeconds <= 0) return;
+    const timeout = window.setTimeout(
+      () => setResendSeconds((seconds) => Math.max(0, seconds - 1)),
+      1000,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [resendSeconds]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 p-4 dark:bg-slate-950">
@@ -131,7 +166,25 @@ export function AdminAuthPage({ onBack, onLogin, onRegister }: Props) {
               </label>
             )}
 
+            {notice && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+                {notice}
+              </div>
+            )}
             {error && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-600 dark:bg-red-950/30 dark:text-red-400">{error}</p>}
+
+            {(awaitingConfirmation || !isRegister) && (
+              <button
+                type="button"
+                disabled={!email.includes("@") || resendSeconds > 0}
+                onClick={() => void resend()}
+                className="w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300"
+              >
+                {resendSeconds > 0
+                  ? `Gửi lại sau ${resendSeconds}s`
+                  : "Gửi lại email xác nhận"}
+              </button>
+            )}
 
             <button type="submit" disabled={loading} className="primary-button !mt-6 w-full py-3.5">
               <LockKeyhole size={17} />

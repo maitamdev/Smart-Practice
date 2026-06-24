@@ -73,6 +73,17 @@ export async function signOutAdmin(): Promise<void> {
   await supabase.auth.signOut({ scope: "global" });
 }
 
+export async function resendAdminConfirmation(email: string): Promise<void> {
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/admin`,
+    },
+  });
+  if (error) throw error;
+}
+
 export async function loadPublishedQuiz(slug: string): Promise<QuizConfig | null> {
   const { data, error } = await supabase
     .from("shared_quizzes")

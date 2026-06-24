@@ -45,6 +45,7 @@ export default function App() {
           onBack={() => undefined}
           onLogin={adminAuth.login}
           onRegister={adminAuth.register}
+          onResendConfirmation={adminAuth.resendConfirmation}
         />
       );
     }
@@ -66,6 +67,7 @@ export default function App() {
           onBack={() => navigate("/admin")}
           onLogin={adminAuth.login}
           onRegister={adminAuth.register}
+          onResendConfirmation={adminAuth.resendConfirmation}
         />
       );
     }
