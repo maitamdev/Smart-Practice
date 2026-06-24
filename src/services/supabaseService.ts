@@ -1,0 +1,151 @@
+import type { User } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase";
+import type { AdminAccount } from "../types/auth";
+import type { QuizConfig, QuizResult, UserAnswers } from "../types/quiz";
+
+const QUIZ_ID = "smart-practice-production";
+const ASSET_BUCKET = "quiz-assets";
+
+export async function getCurrentProfile(user: User): Promise<AdminAccount | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, display_name, role")
+    .eq("id", user.id)
+    .single();
+  if (error) return null;
+  return {
+    id: data.id,
+    email: user.email ?? "",
+    displayName: data.display_name || user.email || "Quản trị viên",
+    role: data.role,
+  };
+}
+
+export async function signInAdmin(email: string, password: string): Promise<AdminAccount> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  const profile = await getCurrentProfile(data.user);
+  if (!profile || profile.role !== "admin") {
+    await supabase.auth.signOut();
+    throw new Error("Tài khoản không có quyền quản trị.");
+  }
+  return profile;
+}
+
+export async function signUpFirstAdmin(
+  email: string,
+  displayName: string,
+  password: string,
+): Promise<{ account: AdminAccount | null; requiresEmailConfirmation: boolean }> {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { display_name: displayName } },
+  });
+  if (error) throw error;
+  if (!data.session || !data.user) {
+    return { account: null, requiresEmailConfirmation: true };
+  }
+  const { error: bootstrapError } = await supabase.rpc("bootstrap_first_admin");
+  if (bootstrapError) throw bootstrapError;
+  return {
+    account: await getCurrentProfile(data.user),
+    requiresEmailConfirmation: false,
+  };
+}
+
+export async function bootstrapCurrentUserAsFirstAdmin(): Promise<void> {
+  const { error } = await supabase.rpc("bootstrap_first_admin");
+  if (error) throw error;
+}
+
+export async function signOutAdmin(): Promise<void> {
+  await supabase.auth.signOut();
+}
+
+export async function loadPublishedQuiz(): Promise<QuizConfig | null> {
+  const { data, error } = await supabase
+    .from("published_quizzes")
+    .select("config")
+    .eq("id", QUIZ_ID)
+    .maybeSingle();
+  if (error) throw error;
+  return (data?.config as QuizConfig | undefined) ?? null;
+}
+
+export async function loadQuizDraft(): Promise<QuizConfig | null> {
+  const { data, error } = await supabase
+    .from("quiz_drafts")
+    .select("config")
+    .eq("id", QUIZ_ID)
+    .maybeSingle();
+  if (error) throw error;
+  return (data?.config as QuizConfig | undefined) ?? null;
+}
+
+export async function saveQuizDraft(config: QuizConfig): Promise<void> {
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) throw new Error("Phiên đăng nhập đã hết hạn.");
+  const { error } = await supabase.from("quiz_drafts").upsert({
+    id: QUIZ_ID,
+    owner_id: authData.user.id,
+    config,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+export async function publishQuiz(config: QuizConfig): Promise<void> {
+  await saveQuizDraft({ ...config, published: true });
+  const { error } = await supabase.rpc("publish_quiz", { quiz_id: QUIZ_ID });
+  if (error) throw error;
+}
+
+export async function uploadQuizAsset(file: File): Promise<string> {
+  const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
+  const path = `${new Date().getFullYear()}/${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from(ASSET_BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file.type,
+  });
+  if (error) throw error;
+  return supabase.storage.from(ASSET_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+export async function saveAttemptResult(input: {
+  quizId: string;
+  answers: UserAnswers;
+  result: QuizResult;
+  startedAt?: number | null;
+}): Promise<void> {
+  const { data } = await supabase.auth.getUser();
+  const { error } = await supabase.from("quiz_attempts").insert({
+    quiz_id: input.quizId,
+    user_id: data.user?.id ?? null,
+    answers: input.answers,
+    result: input.result,
+    started_at: input.startedAt ? new Date(input.startedAt).toISOString() : null,
+    submitted_at: new Date(input.result.submittedAt).toISOString(),
+  });
+  if (error) throw error;
+}
+
+export type AttemptRecord = {
+  id: string;
+  quiz_id: string;
+  result: QuizResult;
+  submitted_at: string;
+  user_id: string | null;
+};
+
+export async function listQuizAttempts(): Promise<AttemptRecord[]> {
+  const { data, error } = await supabase
+    .from("quiz_attempts")
+    .select("id, quiz_id, result, submitted_at, user_id")
+    .eq("quiz_id", QUIZ_ID)
+    .order("submitted_at", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return (data ?? []) as AttemptRecord[];
+}
