@@ -83,3 +83,14 @@ Sau khi chạy migration, nên mở Supabase **Security Advisor** để xác nh�
 5. Thêm domain production vào Supabase Authentication → URL Configuration.
 
 File `vercel.json` đã cấu hình SPA rewrite và các security headers cơ bản.
+
+URL Configuration khuyến nghị:
+
+```text
+Site URL: https://smart-practice.vercel.app
+Redirect URLs:
+https://smart-practice.vercel.app/**
+http://localhost:5173/**
+```
+
+Email xác nhận Admin sẽ quay về `/admin` trên đúng domain đang sử dụng.

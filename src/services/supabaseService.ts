@@ -47,7 +47,10 @@ export async function signUpFirstAdmin(
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { display_name: displayName } },
+    options: {
+      data: { display_name: displayName },
+      emailRedirectTo: `${window.location.origin}/admin`,
+    },
   });
   if (error) throw error;
   if (!data.session || !data.user) {
@@ -67,7 +70,7 @@ export async function bootstrapCurrentUserAsFirstAdmin(): Promise<void> {
 }
 
 export async function signOutAdmin(): Promise<void> {
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "global" });
 }
 
 export async function loadPublishedQuiz(slug: string): Promise<QuizConfig | null> {

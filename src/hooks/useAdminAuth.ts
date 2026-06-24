@@ -29,6 +29,9 @@ export function useAdminAuth() {
         if (active && profile?.role === "admin") setAccount(profile);
       }
       if (active) setLoading(false);
+      if (window.location.hash.includes("access_token=")) {
+        window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+      }
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
