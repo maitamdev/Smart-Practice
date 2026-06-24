@@ -1,74 +1,192 @@
-import { useState } from "react";
-import { AdminPage } from "./pages/AdminPage";
+import { useEffect, useState } from "react";
 import { AdminAuthPage } from "./pages/AdminAuthPage";
+import { AdminDashboardPage } from "./pages/AdminDashboardPage";
+import { AdminPage } from "./pages/AdminPage";
 import { QuizPage } from "./pages/QuizPage";
 import { ResultPage } from "./pages/ResultPage";
 import { StartPage } from "./pages/StartPage";
-import { useQuiz } from "./hooks/useQuiz";
-import { useQuizConfig } from "./hooks/useQuizConfig";
-import { useTheme } from "./hooks/useTheme";
 import { useAdminAuth } from "./hooks/useAdminAuth";
-import { clearAttempt } from "./utils/storage";
+import { useQuiz } from "./hooks/useQuiz";
+import { useTheme } from "./hooks/useTheme";
+import {
+  loadPublishedQuiz,
+  loadQuizDraft,
+  publishQuiz,
+} from "./services/supabaseService";
+import type { QuizConfig } from "./types/quiz";
 
-type AppView = "home" | "quiz" | "admin";
+const getPath = () => window.location.pathname.replace(/\/+$/, "") || "/";
 
 export default function App() {
-  const { theme, toggleTheme } = useTheme();
-  const { config, loading: configLoading, error: configError, publishConfig } = useQuizConfig();
+  const [path, setPath] = useState(getPath);
   const adminAuth = useAdminAuth();
-  const { attempt, startQuiz, answerQuestion, submitQuiz, restartQuiz, discardAttempt } = useQuiz(config);
-  const [quizOpened, setQuizOpened] = useState(false);
-  const [view, setView] = useState<AppView>("home");
 
-  if (view === "admin") {
-    if (adminAuth.loading) {
-      return <div className="flex min-h-screen items-center justify-center bg-slate-50 font-bold text-slate-500">Đang kiểm tra phiên quản trị...</div>;
-    }
+  useEffect(() => {
+    const handlePopState = () => setPath(getPath());
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const navigate = (nextPath: string) => {
+    window.history.pushState({}, "", nextPath);
+    setPath(getPath());
+  };
+
+  const publicMatch = path.match(/^\/quiz\/([^/]+)$/);
+  if (publicMatch) {
+    return <LearnerQuizRoute slug={decodeURIComponent(publicMatch[1])} />;
+  }
+
+  if (path === "/" || path === "/admin") {
+    if (adminAuth.loading) return <Loading text="Đang kiểm tra phiên quản trị..." />;
     if (!adminAuth.authenticated) {
       return (
         <AdminAuthPage
-          onBack={() => setView("home")}
+          onBack={() => undefined}
           onLogin={adminAuth.login}
           onRegister={adminAuth.register}
         />
       );
     }
     return (
-      <AdminPage
-        initialConfig={config}
-        onExit={() => setView("home")}
-        onSave={async (next) => {
-          await publishConfig(next);
-          clearAttempt();
-          discardAttempt();
-        }}
-        onPreview={async (next) => {
-          await publishConfig(next);
-          clearAttempt();
-          discardAttempt();
-          setView("home");
-        }}
+      <AdminDashboardPage
         adminName={adminAuth.account?.displayName || adminAuth.account?.email || "Quản trị viên"}
-        onLogout={() => {
-          void adminAuth.logout();
-          setView("home");
-        }}
+        onEditQuiz={(quizId) => navigate(`/admin/quiz/${quizId}`)}
+        onLogout={() => void adminAuth.logout()}
       />
     );
   }
 
-  if (configLoading) {
-    return <div className="flex min-h-screen items-center justify-center bg-slate-50 font-bold text-slate-500">Đang tải đề thi...</div>;
+  const editorMatch = path.match(/^\/admin\/quiz\/([0-9a-f-]+)$/i);
+  if (editorMatch) {
+    if (adminAuth.loading) return <Loading text="Đang kiểm tra quyền truy cập..." />;
+    if (!adminAuth.authenticated) {
+      return (
+        <AdminAuthPage
+          onBack={() => navigate("/admin")}
+          onLogin={adminAuth.login}
+          onRegister={adminAuth.register}
+        />
+      );
+    }
+    return (
+      <AdminEditorRoute
+        quizId={editorMatch[1]}
+        adminName={adminAuth.account?.displayName || adminAuth.account?.email || "Quản trị viên"}
+        onBack={() => navigate("/admin")}
+        onLogout={() => {
+          void adminAuth.logout();
+          navigate("/admin");
+        }}
+        onOpenPublic={(slug) => navigate(`/quiz/${slug}`)}
+      />
+    );
   }
 
-  if (attempt.quizStatus === "in_progress" && quizOpened && view === "quiz") {
+  return <NotFound onHome={() => navigate("/admin")} />;
+}
+
+function AdminEditorRoute({
+  quizId,
+  adminName,
+  onBack,
+  onLogout,
+  onOpenPublic,
+}: {
+  quizId: string;
+  adminName: string;
+  onBack: () => void;
+  onLogout: () => void;
+  onOpenPublic: (slug: string) => void;
+}) {
+  const [config, setConfig] = useState<QuizConfig | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadQuizDraft(quizId)
+      .then((draft) => {
+        if (!draft) setError("Không tìm thấy đề hoặc bạn không có quyền truy cập.");
+        else setConfig(draft);
+      })
+      .catch((cause) =>
+        setError(cause instanceof Error ? cause.message : "Không thể tải đề."),
+      );
+  }, [quizId]);
+
+  if (error) return <NotFound message={error} onHome={onBack} />;
+  if (!config) return <Loading text="Đang tải trình thiết kế đề..." />;
+
+  return (
+    <AdminPage
+      quizId={quizId}
+      initialConfig={config}
+      onExit={onBack}
+      onSave={async (next) => {
+        const slug = await publishQuiz(quizId, next);
+        setConfig({ ...next, id: quizId, published: true });
+        await navigator.clipboard?.writeText(`${window.location.origin}/quiz/${slug}`);
+        window.alert("Đã xuất bản. Link học viên đã được sao chép.");
+      }}
+      onPreview={async (next) => {
+        const slug = await publishQuiz(quizId, next);
+        onOpenPublic(slug);
+      }}
+      adminName={adminName}
+      onLogout={onLogout}
+    />
+  );
+}
+
+function LearnerQuizRoute({ slug }: { slug: string }) {
+  const { theme, toggleTheme } = useTheme();
+  const [config, setConfig] = useState<QuizConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadPublishedQuiz(slug)
+      .then((published) => {
+        if (!published) setError("Link đề thi không tồn tại hoặc đã bị gỡ.");
+        else setConfig(published);
+      })
+      .catch((cause) =>
+        setError(cause instanceof Error ? cause.message : "Không thể tải đề thi."),
+      )
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  if (loading) return <Loading text="Đang tải đề thi..." />;
+  if (error || !config) return <NotFound message={error} />;
+
+  return (
+    <LearnerQuizSession
+      config={config}
+      theme={theme}
+      onToggleTheme={toggleTheme}
+    />
+  );
+}
+
+function LearnerQuizSession({
+  config,
+  theme,
+  onToggleTheme,
+}: {
+  config: QuizConfig;
+  theme: "light" | "dark";
+  onToggleTheme: () => void;
+}) {
+  const { attempt, startQuiz, answerQuestion, submitQuiz, restartQuiz } = useQuiz(config);
+  const [quizOpened, setQuizOpened] = useState(false);
+
+  if (attempt.quizStatus === "in_progress" && quizOpened) {
     return (
       <QuizPage
         questions={attempt.shuffledQuestions}
         answers={attempt.userAnswers}
         endTime={attempt.endTime}
         theme={theme}
-        onToggleTheme={toggleTheme}
+        onToggleTheme={onToggleTheme}
         onAnswer={answerQuestion}
         onSubmit={submitQuiz}
         brandName={config.brandName}
@@ -86,8 +204,11 @@ export default function App() {
         answers={attempt.userAnswers}
         result={attempt.result}
         theme={theme}
-        onToggleTheme={toggleTheme}
-        onRestart={restartQuiz}
+        onToggleTheme={onToggleTheme}
+        onRestart={() => {
+          restartQuiz();
+          setQuizOpened(true);
+        }}
         experience={config.experience}
       />
     );
@@ -96,28 +217,41 @@ export default function App() {
   return (
     <StartPage
       theme={theme}
-      onToggleTheme={toggleTheme}
+      onToggleTheme={onToggleTheme}
       hasSavedAttempt={attempt.quizStatus === "in_progress"}
       config={config}
-      loadError={configError}
-      onAdmin={() => setView("admin")}
-      onContinue={() => {
-        setQuizOpened(true);
-        setView("quiz");
-      }}
+      onContinue={() => setQuizOpened(true)}
       onStart={() => {
-        if (!config.published || config.questions.length === 0) {
-          setView("admin");
-          return;
-        }
-        if (attempt.quizStatus === "in_progress") {
-          restartQuiz();
-        } else {
-          startQuiz();
-        }
+        if (attempt.quizStatus === "in_progress") restartQuiz();
+        else startQuiz();
         setQuizOpened(true);
-        setView("quiz");
       }}
     />
+  );
+}
+
+function Loading({ text }: { text: string }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 font-bold text-slate-500 dark:bg-slate-950">
+      {text}
+    </div>
+  );
+}
+
+function NotFound({
+  message = "Trang bạn yêu cầu không tồn tại.",
+  onHome,
+}: {
+  message?: string;
+  onHome?: () => void;
+}) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-100 p-4 dark:bg-slate-950">
+      <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-xl dark:bg-slate-900">
+        <h1 className="text-2xl font-black">Không thể truy cập</h1>
+        <p className="mt-3 text-sm text-slate-500">{message}</p>
+        {onHome && <button type="button" className="primary-button mt-6" onClick={onHome}>Về trang quản trị</button>}
+      </div>
+    </main>
   );
 }

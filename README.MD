@@ -28,8 +28,10 @@ Project hiện tại: `xftaluzvnxhizdeckvuu`.
 3. Sao chép toàn bộ nội dung file:
    `supabase/migrations/202606250001_initial_schema.sql`.
 4. Chọn **Run**.
-5. Trong Authentication → URL Configuration, thêm URL production và URL local.
-6. Tạo tài khoản Admin đầu tiên từ giao diện web.
+5. Tiếp tục chạy:
+   `supabase/migrations/202606250002_multi_tenant_quizzes.sql`.
+6. Trong Authentication → URL Configuration, thêm URL production và URL local.
+7. Tạo tài khoản Admin từ giao diện web.
 
 Migration tạo:
 
@@ -40,15 +42,20 @@ Migration tạo:
 - RLS policies.
 - Storage bucket `quiz-assets`.
 - RPC xuất bản đề.
+- Kho đề riêng theo từng Admin.
+- Link học viên riêng cho từng đề.
+- Cô lập đề và kết quả bằng `owner_id` + RLS.
 
 ## Quy trình Admin
 
-1. Chọn **Quản trị đề thi**.
-2. Đăng nhập hoặc tạo Admin đầu tiên.
+1. Mở `/admin` và đăng nhập.
+2. Tạo một hoặc nhiều đề trong kho đề cá nhân.
 3. Tạo/sửa câu hỏi; ảnh được upload lên Supabase Storage.
 4. Bản nháp tự động đồng bộ lên cloud.
-5. Chọn **Lưu & xuất bản** để cập nhật đề cho mọi thiết bị.
-6. Xem kết quả học viên trong mục **Kết quả học viên**.
+5. Chọn **Lưu & xuất bản**.
+6. Hệ thống tạo link dạng `/quiz/ma-de` để gửi học viên.
+7. Học viên chỉ thấy trang làm bài và kết quả của link đó.
+8. Xem kết quả riêng từng đề trong mục **Kết quả học viên**.
 
 ## Cấu trúc đề
 

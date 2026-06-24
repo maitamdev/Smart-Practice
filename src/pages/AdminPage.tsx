@@ -25,13 +25,14 @@ import {
 } from "../utils/adminQuestions";
 import { applyExamStructure, validateExamStructure } from "../utils/examStructure";
 import {
-  listQuizAttempts,
+  listAttemptsForQuiz,
   loadQuizDraft,
   saveQuizDraft,
   type AttemptRecord,
 } from "../services/supabaseService";
 
 type Props = {
+  quizId: string;
   initialConfig: QuizConfig;
   onSave: (config: QuizConfig) => Promise<void>;
   onExit: () => void;
@@ -42,7 +43,7 @@ type Props = {
 
 type Tab = "questions" | "settings" | "prompt" | "results";
 
-export function AdminPage({ initialConfig, onSave, onExit, onPreview, adminName, onLogout }: Props) {
+export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, adminName, onLogout }: Props) {
   const [draft, setDraft] = useState<QuizConfig>(() => structuredClone(initialConfig));
   const [selectedId, setSelectedId] = useState<number | null>(draft.questions[0]?.id ?? null);
   const [tab, setTab] = useState<Tab>("questions");
@@ -58,7 +59,7 @@ export function AdminPage({ initialConfig, onSave, onExit, onPreview, adminName,
 
   useEffect(() => {
     let active = true;
-    loadQuizDraft()
+    loadQuizDraft(quizId)
       .then((cloudDraft) => {
         if (!active) return;
         if (cloudDraft) {
@@ -75,21 +76,21 @@ export function AdminPage({ initialConfig, onSave, onExit, onPreview, adminName,
     return () => {
       active = false;
     };
-  }, []);
+  }, [quizId]);
 
   useEffect(() => {
     if (!draftReady) return;
     const timeout = window.setTimeout(() => {
       setSavingDraft(true);
       setSaveError("");
-      saveQuizDraft(draft)
+      saveQuizDraft(quizId, draft)
         .catch((cause) =>
           setSaveError(cause instanceof Error ? cause.message : "Không thể lưu bản nháp."),
         )
         .finally(() => setSavingDraft(false));
     }, 800);
     return () => window.clearTimeout(timeout);
-  }, [draft, draftReady]);
+  }, [draft, draftReady, quizId]);
 
   const updateQuestions = (questions: QuizQuestion[]) =>
     setDraft((current) => ({ ...current, questions: normalizeQuestionNumbers(questions) }));
@@ -269,7 +270,7 @@ export function AdminPage({ initialConfig, onSave, onExit, onPreview, adminName,
                 }}
               />
             )}
-            {tab === "results" && <ResultsDashboard />}
+            {tab === "results" && <ResultsDashboard quizId={quizId} />}
             {tab === "questions" && !selected && (
               <div className="py-20 text-center">
                 <h2 className="text-xl font-black text-slate-900 dark:text-white">Đề thi chưa có câu hỏi</h2>
@@ -314,19 +315,19 @@ export function AdminPage({ initialConfig, onSave, onExit, onPreview, adminName,
   );
 }
 
-function ResultsDashboard() {
+function ResultsDashboard({ quizId }: { quizId: string }) {
   const [attempts, setAttempts] = useState<AttemptRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    listQuizAttempts()
+    listAttemptsForQuiz(quizId)
       .then(setAttempts)
       .catch((cause) =>
         setError(cause instanceof Error ? cause.message : "Không thể tải kết quả."),
       )
       .finally(() => setLoading(false));
-  }, []);
+  }, [quizId]);
 
   const average = attempts.length
     ? Math.round(

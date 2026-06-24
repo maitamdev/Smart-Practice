@@ -3,8 +3,15 @@ import { supabase } from "../lib/supabase";
 import type { AdminAccount } from "../types/auth";
 import type { QuizConfig, QuizResult, UserAnswers } from "../types/quiz";
 
-const QUIZ_ID = "smart-practice-production";
 const ASSET_BUCKET = "quiz-assets";
+
+export type AdminQuizSummary = {
+  id: string;
+  title: string;
+  slug: string;
+  updated_at: string;
+  is_published: boolean;
+};
 
 export async function getCurrentProfile(user: User): Promise<AdminAccount | null> {
   const { data, error } = await supabase
@@ -63,41 +70,98 @@ export async function signOutAdmin(): Promise<void> {
   await supabase.auth.signOut();
 }
 
-export async function loadPublishedQuiz(): Promise<QuizConfig | null> {
+export async function loadPublishedQuiz(slug: string): Promise<QuizConfig | null> {
   const { data, error } = await supabase
-    .from("published_quizzes")
-    .select("config")
-    .eq("id", QUIZ_ID)
+    .from("shared_quizzes")
+    .select("id, config")
+    .eq("slug", slug)
     .maybeSingle();
   if (error) throw error;
-  return (data?.config as QuizConfig | undefined) ?? null;
+  if (!data) return null;
+  return {
+    ...(data.config as QuizConfig),
+    id: data.id,
+    published: true,
+  };
 }
 
-export async function loadQuizDraft(): Promise<QuizConfig | null> {
+export async function listAdminQuizzes(): Promise<AdminQuizSummary[]> {
   const { data, error } = await supabase
-    .from("quiz_drafts")
-    .select("config")
-    .eq("id", QUIZ_ID)
-    .maybeSingle();
+    .from("admin_quizzes")
+    .select("id, title, slug, updated_at, shared_quizzes(id)")
+    .order("updated_at", { ascending: false });
   if (error) throw error;
-  return (data?.config as QuizConfig | undefined) ?? null;
+  return (data ?? []).map((item) => ({
+    id: item.id,
+    title: item.title,
+    slug: item.slug,
+    updated_at: item.updated_at,
+    is_published: Array.isArray(item.shared_quizzes)
+      ? item.shared_quizzes.length > 0
+      : Boolean(item.shared_quizzes),
+  }));
 }
 
-export async function saveQuizDraft(config: QuizConfig): Promise<void> {
+function createSlug(title: string): string {
+  const base = title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 42) || "quiz";
+  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
+}
+
+export async function createAdminQuiz(config: QuizConfig): Promise<AdminQuizSummary> {
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) throw new Error("Phiên đăng nhập đã hết hạn.");
-  const { error } = await supabase.from("quiz_drafts").upsert({
-    id: QUIZ_ID,
+  const slug = createSlug(config.title);
+  const { data, error } = await supabase.from("admin_quizzes").insert({
     owner_id: authData.user.id,
-    config,
+    title: config.title,
+    slug,
+    draft_config: config,
     updated_at: new Date().toISOString(),
-  });
+  }).select("id, title, slug, updated_at").single();
+  if (error) throw error;
+  return { ...data, is_published: false };
+}
+
+export async function loadQuizDraft(quizId: string): Promise<QuizConfig | null> {
+  const { data, error } = await supabase
+    .from("admin_quizzes")
+    .select("id, draft_config")
+    .eq("id", quizId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return { ...(data.draft_config as QuizConfig), id: data.id };
+}
+
+export async function saveQuizDraft(quizId: string, config: QuizConfig): Promise<void> {
+  const { error } = await supabase
+    .from("admin_quizzes")
+    .update({
+      title: config.title,
+      draft_config: { ...config, id: quizId },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", quizId);
   if (error) throw error;
 }
 
-export async function publishQuiz(config: QuizConfig): Promise<void> {
-  await saveQuizDraft({ ...config, published: true });
-  const { error } = await supabase.rpc("publish_quiz", { quiz_id: QUIZ_ID });
+export async function publishQuiz(quizId: string, config: QuizConfig): Promise<string> {
+  await saveQuizDraft(quizId, { ...config, published: true });
+  const { data, error } = await supabase.rpc("publish_owned_quiz", {
+    target_quiz_id: quizId,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function deleteAdminQuiz(quizId: string): Promise<void> {
+  const { error } = await supabase.from("admin_quizzes").delete().eq("id", quizId);
   if (error) throw error;
 }
 
@@ -119,10 +183,8 @@ export async function saveAttemptResult(input: {
   result: QuizResult;
   startedAt?: number | null;
 }): Promise<void> {
-  const { data } = await supabase.auth.getUser();
-  const { error } = await supabase.from("quiz_attempts").insert({
+  const { error } = await supabase.from("shared_quiz_attempts").insert({
     quiz_id: input.quizId,
-    user_id: data.user?.id ?? null,
     answers: input.answers,
     result: input.result,
     started_at: input.startedAt ? new Date(input.startedAt).toISOString() : null,
@@ -136,14 +198,13 @@ export type AttemptRecord = {
   quiz_id: string;
   result: QuizResult;
   submitted_at: string;
-  user_id: string | null;
 };
 
-export async function listQuizAttempts(): Promise<AttemptRecord[]> {
+export async function listAttemptsForQuiz(quizId: string): Promise<AttemptRecord[]> {
   const { data, error } = await supabase
-    .from("quiz_attempts")
-    .select("id, quiz_id, result, submitted_at, user_id")
-    .eq("quiz_id", QUIZ_ID)
+    .from("shared_quiz_attempts")
+    .select("id, quiz_id, result, submitted_at")
+    .eq("quiz_id", quizId)
     .order("submitted_at", { ascending: false })
     .limit(200);
   if (error) throw error;

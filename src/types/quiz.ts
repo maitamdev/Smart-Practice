@@ -40,6 +40,7 @@ export type QuizResult = {
 };
 
 export type StoredAttempt = {
+  quizId: string;
   shuffledQuestions: QuizQuestion[];
   userAnswers: UserAnswers;
   endTime: number | null;

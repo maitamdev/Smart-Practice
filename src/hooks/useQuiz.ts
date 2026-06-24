@@ -6,6 +6,7 @@ import { clearAttempt, loadAttempt, saveAttempt } from "../utils/storage";
 import { saveAttemptResult } from "../services/supabaseService";
 
 const emptyAttempt: StoredAttempt = {
+  quizId: "",
   shuffledQuestions: [],
   userAnswers: {},
   endTime: null,
@@ -14,7 +15,10 @@ const emptyAttempt: StoredAttempt = {
 };
 
 export function useQuiz(config: QuizConfig) {
-  const [attempt, setAttempt] = useState<StoredAttempt>(() => loadAttempt() ?? emptyAttempt);
+  const [attempt, setAttempt] = useState<StoredAttempt>(() => {
+    const saved = loadAttempt();
+    return saved?.quizId === config.id ? saved : emptyAttempt;
+  });
 
   useEffect(() => {
     if (attempt.quizStatus !== "not_started") saveAttempt(attempt);
@@ -23,6 +27,7 @@ export function useQuiz(config: QuizConfig) {
   const startQuiz = useCallback(() => {
     if (!config.published || config.questions.length === 0) return;
     setAttempt({
+      quizId: config.id,
       shuffledQuestions: createShuffledAttempt(config.questions),
       userAnswers: {},
       endTime: Date.now() + config.durationMinutes * 60 * 1000,
@@ -69,6 +74,7 @@ export function useQuiz(config: QuizConfig) {
     if (!config.published || config.questions.length === 0) return;
     clearAttempt();
     setAttempt({
+      quizId: config.id,
       shuffledQuestions: createShuffledAttempt(config.questions),
       userAnswers: {},
       endTime: Date.now() + config.durationMinutes * 60 * 1000,

@@ -15,7 +15,7 @@ type StartPageProps = {
   onStart: () => void;
   hasSavedAttempt?: boolean;
   onContinue?: () => void;
-  onAdmin: () => void;
+  onAdmin?: () => void;
   config: QuizConfig;
   loadError?: string | null;
 };
@@ -148,14 +148,14 @@ export function StartPage({
           </div>
         </div>
 
-        <button
+        {onAdmin && <button
           type="button"
           onClick={onToggleTheme}
           className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow sm:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
           aria-label="Đổi giao diện"
         >
           {theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
-        </button>
+        </button>}
         <button
           type="button"
           onClick={onAdmin}
