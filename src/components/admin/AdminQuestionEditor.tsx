@@ -227,18 +227,19 @@ export function AdminQuestionEditor({ question, onChange, onDelete }: Props) {
         </div>
         <div className="grid gap-3">
           {question.options.map((option, index) => (
-            <div key={option.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+            <div key={option.id} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
               <input
                 type="radio"
                 name={`correct-${question.id}`}
                 checked={question.correctOptionId === option.id}
                 onChange={() => patch({ correctOptionId: option.id })}
-                className="h-5 w-5 accent-blue-600"
+                className="mt-2.5 h-5 w-5 shrink-0 accent-blue-600"
               />
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-sm font-black text-blue-700 dark:bg-blue-950">
+              <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-sm font-black text-blue-700 dark:bg-blue-950">
                 {option.label}
               </span>
-              <input
+              <textarea
+                rows={2}
                 value={option.text}
                 placeholder={question.type.includes("blank") || question.type === "abc_fixed" ? "Có thể để trống" : `Nhập phương án ${option.label}`}
                 onChange={(event) => {
@@ -247,6 +248,7 @@ export function AdminQuestionEditor({ question, onChange, onDelete }: Props) {
                   );
                   patch({ options });
                 }}
+                className="min-h-[58px] flex-1 resize-y rounded-xl border-0 bg-transparent px-2 py-2 text-sm leading-6 text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100"
               />
             </div>
           ))}
