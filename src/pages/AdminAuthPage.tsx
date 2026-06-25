@@ -210,6 +210,107 @@ export function AdminAuthPage({
   );
 }
 
+export function AdminPasswordRecoveryPage({
+  onSubmit,
+}: {
+  onSubmit: (password: string) => Promise<void>;
+}) {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    if (password.length < 8) {
+      setError("Mật khẩu phải có ít nhất 8 ký tự.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await onSubmit(password);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Không thể cập nhật mật khẩu.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-admin-auth p-4">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-md rounded-[28px] border border-white bg-white p-7 shadow-2xl sm:p-10"
+      >
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white">
+          <LockKeyhole size={25} />
+        </span>
+        <p className="mt-7 text-xs font-extrabold uppercase tracking-[.2em] text-blue-600">
+          Smart Practice Admin
+        </p>
+        <h1 className="mt-2 text-3xl font-black text-slate-950">
+          Tạo mật khẩu mới
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          Nhập mật khẩu mới để hoàn tất khôi phục tài khoản quản trị.
+        </p>
+
+        <div className="mt-7 space-y-5">
+          <AuthField label="Mật khẩu mới" icon={LockKeyhole}>
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="new-password"
+              placeholder="Tối thiểu 8 ký tự"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((value) => !value)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </AuthField>
+          <AuthField label="Xác nhận mật khẩu" icon={LockKeyhole}>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              autoComplete="new-password"
+              placeholder="Nhập lại mật khẩu mới"
+            />
+          </AuthField>
+        </div>
+
+        {error && (
+          <p className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-600">
+            {error}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={loading}
+          className="primary-button mt-6 w-full !rounded-xl py-4"
+        >
+          {loading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
+        </button>
+      </form>
+    </main>
+  );
+}
+
 function AuthField({
   label,
   icon: Icon,

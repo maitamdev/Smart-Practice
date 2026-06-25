@@ -8,12 +8,14 @@ import {
   signUpFirstAdmin,
   resendAdminConfirmation,
   sendAdminPasswordReset,
+  updateAdminPassword,
 } from "../services/supabaseService";
 import type { AdminAccount } from "../types/auth";
 
 export function useAdminAuth() {
   const [account, setAccount] = useState<AdminAccount | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recoveryMode, setRecoveryMode] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -36,8 +38,9 @@ export function useAdminAuth() {
       }
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!active) return;
+      if (event === "PASSWORD_RECOVERY") setRecoveryMode(true);
       if (!session?.user) setAccount(null);
       else {
         const profile = await getCurrentProfile(session.user);
@@ -80,14 +83,21 @@ export function useAdminAuth() {
     await sendAdminPasswordReset(email);
   };
 
+  const completePasswordRecovery = async (password: string) => {
+    await updateAdminPassword(password);
+    setRecoveryMode(false);
+  };
+
   return {
     account,
     authenticated: account?.role === "admin",
     loading,
+    recoveryMode,
     register,
     login,
     logout,
     resendConfirmation,
     resetPassword,
+    completePasswordRecovery,
   };
 }

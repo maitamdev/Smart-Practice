@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { QuizConfig, StoredAttempt, UserAnswers } from "../types/quiz";
 import { createShuffledAttempt } from "../utils/questionRules";
-import { calculateScore } from "../utils/score";
 import { clearAttempt, loadAttempt, saveAttempt } from "../utils/storage";
 import { saveAttemptResult } from "../services/supabaseService";
 
 const emptyAttempt: StoredAttempt = {
   quizId: "",
+  quizUpdatedAt: 0,
   shuffledQuestions: [],
   userAnswers: {},
   endTime: null,
@@ -15,10 +15,18 @@ const emptyAttempt: StoredAttempt = {
 };
 
 export function useQuiz(config: QuizConfig) {
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [attempt, setAttempt] = useState<StoredAttempt>(() => {
-    const saved = loadAttempt();
-    if (saved?.quizId === config.id) return saved;
-    if (saved) clearAttempt();
+    const saved = loadAttempt(config.id);
+    if (
+      saved?.quizId === config.id &&
+      saved.quizUpdatedAt === config.updatedAt
+    ) {
+      return saved;
+    }
+    if (saved) clearAttempt(config.id);
     return emptyAttempt;
   });
 
@@ -30,6 +38,7 @@ export function useQuiz(config: QuizConfig) {
     if (!config.published || config.questions.length === 0) return;
     setAttempt({
       quizId: config.id,
+      quizUpdatedAt: config.updatedAt,
       shuffledQuestions: createShuffledAttempt(config.questions),
       userAnswers: {},
       endTime: Date.now() + config.durationMinutes * 60 * 1000,
@@ -48,35 +57,52 @@ export function useQuiz(config: QuizConfig) {
     }));
   }, []);
 
-  const submitQuiz = useCallback(() => {
-    setAttempt((current) => {
-      if (current.quizStatus !== "in_progress") return current;
-      const result = calculateScore(current.shuffledQuestions, current.userAnswers);
-      const startedAt = current.endTime
-        ? current.endTime - config.durationMinutes * 60 * 1000
-        : null;
-      void saveAttemptResult({
+  const submitQuiz = useCallback(async () => {
+    if (submittingRef.current || attempt.quizStatus !== "in_progress") return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setSubmitError("");
+    const startedAt = attempt.endTime
+      ? attempt.endTime - config.durationMinutes * 60 * 1000
+      : null;
+
+    try {
+      const submission = await saveAttemptResult({
         quizId: config.id,
-        answers: current.userAnswers,
-        result,
+        answers: attempt.userAnswers,
         startedAt,
-      }).catch(() => {
-        // The local result remains available and can still be reviewed offline.
       });
-      return {
+      setAttempt((current) => ({
         ...current,
+        shuffledQuestions: current.shuffledQuestions.map((question) => ({
+          ...question,
+          correctOptionId:
+            submission.answerKey[String(question.id)] ?? "",
+          explanation:
+            submission.explanations[String(question.id)] ?? "",
+        })),
         quizStatus: "submitted",
         endTime: null,
-        result,
-      };
-    });
-  }, [config.durationMinutes, config.id]);
+        result: submission.result,
+      }));
+    } catch (cause) {
+      setSubmitError(
+        cause instanceof Error
+          ? cause.message
+          : "Không thể nộp bài. Vui lòng kiểm tra mạng và thử lại.",
+      );
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  }, [attempt, config.durationMinutes, config.id]);
 
   const restartQuiz = useCallback(() => {
     if (!config.published || config.questions.length === 0) return;
-    clearAttempt();
+    clearAttempt(config.id);
     setAttempt({
       quizId: config.id,
+      quizUpdatedAt: config.updatedAt,
       shuffledQuestions: createShuffledAttempt(config.questions),
       userAnswers: {},
       endTime: Date.now() + config.durationMinutes * 60 * 1000,
@@ -90,12 +116,14 @@ export function useQuiz(config: QuizConfig) {
   }, []);
 
   const discardAttempt = useCallback(() => {
-    clearAttempt();
+    clearAttempt(config.id);
     setAttempt(emptyAttempt);
-  }, []);
+  }, [config.id]);
 
   return {
     attempt,
+    submitting,
+    submitError,
     startQuiz,
     answerQuestion,
     updateAnswers,

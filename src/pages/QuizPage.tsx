@@ -15,7 +15,9 @@ type QuizPageProps = {
   theme: "light" | "dark";
   onToggleTheme: () => void;
   onAnswer: (questionId: number, optionId: string) => void;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
+  submitting: boolean;
+  submitError: string;
   brandName: string;
   brandBadge: string;
   structure: QuizStructure;
@@ -92,6 +94,8 @@ export function QuizPage({
   onToggleTheme,
   onAnswer,
   onSubmit,
+  submitting,
+  submitError,
   brandName,
   brandBadge,
   structure,
@@ -120,7 +124,7 @@ export function QuizPage({
   const nextStart = groups[Math.min(groups.length - 1, groupIndex + 1)]?.[0] ?? groupStart;
   const canSubmit = experience.allowSubmitWithUnanswered || answered === questions.length;
   const requestSubmit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit || submitting) return;
     if (experience.confirmBeforeSubmit) setShowSubmitModal(true);
     else onSubmit();
   };
@@ -150,8 +154,8 @@ export function QuizPage({
             <button type="button" className="header-icon" onClick={onToggleTheme} aria-label="Đổi giao diện">
               {theme === "dark" ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
             </button>
-            <button type="button" className="primary-button hidden sm:flex" onClick={requestSubmit} disabled={!canSubmit}>
-              <Send size={15} /> Nộp bài
+            <button type="button" className="primary-button hidden sm:flex" onClick={requestSubmit} disabled={!canSubmit || submitting}>
+              <Send size={15} /> {submitting ? "Đang chấm..." : "Nộp bài"}
             </button>
             <button type="button" className="header-icon lg:hidden" onClick={() => setMobileNavigatorOpen(true)}>
               <Menu size={19} />
@@ -161,6 +165,11 @@ export function QuizPage({
       </header>
 
       <div className="mx-auto max-w-[1500px] p-3 sm:p-5">
+          {submitError && (
+            <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              {submitError}
+            </div>
+          )}
           {experience.showProgress && <div className="mb-3 lg:hidden">
             <ProgressSummary answered={answered} total={questions.length} />
           </div>}
@@ -285,7 +294,7 @@ export function QuizPage({
         type="button"
         className="fixed bottom-4 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-blue-700 text-white shadow-xl sm:hidden"
         onClick={requestSubmit}
-        disabled={!canSubmit}
+        disabled={!canSubmit || submitting}
         aria-label="Nộp bài"
       >
         <Send size={18} />
@@ -307,7 +316,10 @@ export function QuizPage({
         answered={answered}
         total={questions.length}
         onCancel={() => setShowSubmitModal(false)}
-        onConfirm={onSubmit}
+        onConfirm={() => {
+          setShowSubmitModal(false);
+          void onSubmit();
+        }}
       />
     </main>
   );

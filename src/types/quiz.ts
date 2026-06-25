@@ -44,6 +44,7 @@ export type QuizResult = {
 
 export type StoredAttempt = {
   quizId: string;
+  quizUpdatedAt: number;
   shuffledQuestions: QuizQuestion[];
   userAnswers: UserAnswers;
   endTime: number | null;

@@ -25,12 +25,36 @@ export function AdminQuestionEditor({ question, onChange, onDelete }: Props) {
 
   const changeType = (type: QuestionType) => {
     const template = createEmptyQuestion(question.id, type, question.section);
+    const nextOptions = template.options.map((templateOption, index) => {
+      const existing = question.options[index];
+      return existing
+        ? {
+            ...existing,
+            label: templateOption.label,
+            text:
+              type === "abc_fixed" || type === "abc_blank_fixed"
+                ? ""
+                : existing.text,
+          }
+        : templateOption;
+    });
+    const previousCorrectIndex = Math.max(
+      0,
+      question.options.findIndex(
+        (option) => option.id === question.correctOptionId,
+      ),
+    );
+    const correctOption =
+      nextOptions[Math.min(previousCorrectIndex, nextOptions.length - 1)];
+
     patch({
       type,
-      options: template.options,
-      correctOptionId: template.correctOptionId,
-      shuffleQuestion: template.shuffleQuestion,
-      shuffleOptions: template.shuffleOptions,
+      question: type === "abc_blank_fixed" ? "" : question.question,
+      image: type === "image_fixed" ? question.image : "",
+      options: nextOptions,
+      correctOptionId: correctOption.id,
+      shuffleQuestion: type === "normal" ? question.shuffleQuestion : false,
+      shuffleOptions: type === "normal" ? question.shuffleOptions : false,
     });
   };
 

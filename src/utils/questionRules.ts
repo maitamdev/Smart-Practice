@@ -15,25 +15,34 @@ const prepareQuestion = (question: QuizQuestion): QuizQuestion => ({
 });
 
 export function createShuffledAttempt(source: readonly QuizQuestion[]): QuizQuestion[] {
-  const fixedListening = source
-    .filter((question) => question.section === "listening" && !question.shuffleQuestion)
-    .sort((a, b) => a.originalNumber - b.originalNumber);
-  const listeningNormal = source.filter(
-    (question) => question.section === "listening" && question.shuffleQuestion,
+  const ordered = [...source].sort(
+    (a, b) => a.originalNumber - b.originalNumber,
   );
-  const fixedReading = source
-    .filter((question) => question.section === "reading" && !question.shuffleQuestion)
-    .sort((a, b) => a.originalNumber - b.originalNumber);
-  const reading = source.filter(
-    (question) => question.section === "reading" && question.shuffleQuestion,
-  );
+  const pools: Record<QuizQuestion["section"], QuizQuestion[]> = {
+    listening: shuffleArray(
+      ordered.filter(
+        (question) =>
+          question.section === "listening" && question.shuffleQuestion,
+      ),
+    ),
+    reading: shuffleArray(
+      ordered.filter(
+        (question) =>
+          question.section === "reading" && question.shuffleQuestion,
+      ),
+    ),
+  };
+  const poolIndexes: Record<QuizQuestion["section"], number> = {
+    listening: 0,
+    reading: 0,
+  };
 
-  return [
-    ...fixedListening,
-    ...shuffleArray(listeningNormal),
-    ...fixedReading,
-    ...shuffleArray(reading),
-  ].map(prepareQuestion);
+  return ordered.map((question) => {
+    const selected = question.shuffleQuestion
+      ? pools[question.section][poolIndexes[question.section]++]
+      : question;
+    return prepareQuestion(selected);
+  });
 }
 
 export const shouldRenderGroupDivider = (

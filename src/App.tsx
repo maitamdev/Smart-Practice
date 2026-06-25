@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { AdminAuthPage } from "./pages/AdminAuthPage";
+import {
+  AdminAuthPage,
+  AdminPasswordRecoveryPage,
+} from "./pages/AdminAuthPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { AdminPage } from "./pages/AdminPage";
 import { QuizPage } from "./pages/QuizPage";
@@ -47,6 +50,14 @@ function AdminApp({
   navigate: (path: string) => void;
 }) {
   const adminAuth = useAdminAuth();
+
+  if (adminAuth.recoveryMode) {
+    return (
+      <AdminPasswordRecoveryPage
+        onSubmit={adminAuth.completePasswordRecovery}
+      />
+    );
+  }
 
   if (path === "/" || path === "/admin") {
     if (adminAuth.loading) return <Loading text="Đang kiểm tra phiên quản trị..." />;
@@ -209,7 +220,15 @@ function LearnerQuizSession({
   theme: "light" | "dark";
   onToggleTheme: () => void;
 }) {
-  const { attempt, startQuiz, answerQuestion, submitQuiz, restartQuiz } = useQuiz(config);
+  const {
+    attempt,
+    startQuiz,
+    answerQuestion,
+    submitQuiz,
+    restartQuiz,
+    submitting,
+    submitError,
+  } = useQuiz(config);
   const [quizOpened, setQuizOpened] = useState(false);
 
   if (attempt.quizStatus === "in_progress" && quizOpened) {
@@ -222,6 +241,8 @@ function LearnerQuizSession({
         onToggleTheme={onToggleTheme}
         onAnswer={answerQuestion}
         onSubmit={submitQuiz}
+        submitting={submitting}
+        submitError={submitError}
         brandName={config.brandName}
         brandBadge={config.brandBadge}
         structure={config.structure}

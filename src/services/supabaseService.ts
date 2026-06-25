@@ -92,21 +92,29 @@ export async function sendAdminPasswordReset(email: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function updateAdminPassword(password: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+}
+
 export async function loadPublishedQuiz(slug: string): Promise<QuizConfig | null> {
-  const { data, error } = await supabase
-    .from("shared_quizzes")
-    .select("id, config")
-    .eq("slug", slug)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_public_quiz", {
+    target_slug: slug,
+  });
   if (error) throw error;
   if (!data) return null;
-  const saved = data.config as Partial<QuizConfig>;
+  const payload = data as { id: string; config: Partial<QuizConfig> };
+  const saved = payload.config;
   return {
     ...defaultQuizConfig,
     ...saved,
-    id: data.id,
+    id: payload.id,
     published: true,
-    questions: saved.questions ?? [],
+    questions: (saved.questions ?? []).map((question) => ({
+      ...question,
+      correctOptionId: question.correctOptionId ?? "",
+      explanation: question.explanation ?? "",
+    })),
     structure: {
       ...defaultQuizConfig.structure,
       ...(saved.structure ?? {}),
@@ -243,17 +251,25 @@ export async function uploadQuizAsset(file: File): Promise<string> {
 export async function saveAttemptResult(input: {
   quizId: string;
   answers: UserAnswers;
-  result: QuizResult;
   startedAt?: number | null;
-}): Promise<void> {
-  const { error } = await supabase.from("shared_quiz_attempts").insert({
-    quiz_id: input.quizId,
-    answers: input.answers,
-    result: input.result,
-    started_at: input.startedAt ? new Date(input.startedAt).toISOString() : null,
-    submitted_at: new Date(input.result.submittedAt).toISOString(),
+}): Promise<{
+  result: QuizResult;
+  answerKey: Record<string, string>;
+  explanations: Record<string, string>;
+}> {
+  const { data, error } = await supabase.rpc("submit_quiz_attempt", {
+    target_quiz_id: input.quizId,
+    submitted_answers: input.answers,
+    started_at_value: input.startedAt
+      ? new Date(input.startedAt).toISOString()
+      : null,
   });
   if (error) throw error;
+  return data as {
+    result: QuizResult;
+    answerKey: Record<string, string>;
+    explanations: Record<string, string>;
+  };
 }
 
 export type AttemptRecord = {

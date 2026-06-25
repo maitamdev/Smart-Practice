@@ -32,6 +32,7 @@ import {
   type AdminQuizSummary,
 } from "../services/supabaseService";
 import { defaultQuizConfig } from "../data/questions";
+import { applyExamStructure } from "../utils/examStructure";
 
 type Props = {
   adminName: string;
@@ -78,19 +79,25 @@ export function AdminDashboardPage({ adminName, onEditQuiz, onLogout }: Props) {
     setError("");
     try {
       const base = structuredClone(defaultQuizConfig);
-      const created = await createAdminQuiz({
+      const structure = {
+        ...base.structure,
+        enabled: input.mode !== "free",
+        preset: input.mode === "standard" ? "standard_175" as const : "custom" as const,
+      };
+      const config = {
         ...base,
         title: input.title,
         subtitle: input.description,
         durationMinutes: input.duration,
         brandName: adminName || "Smart Practice",
-        structure: {
-          ...base.structure,
-          enabled: input.mode !== "free",
-          preset: input.mode === "standard" ? "standard_175" : "custom",
-        },
+        structure,
+        questions:
+          input.mode === "standard"
+            ? applyExamStructure([], structure)
+            : [],
         updatedAt: Date.now(),
-      });
+      };
+      const created = await createAdminQuiz(config);
       onEditQuiz(created.id);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể tạo đề.");

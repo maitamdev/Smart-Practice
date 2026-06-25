@@ -51,6 +51,7 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
   const [selectedId, setSelectedId] = useState<number | null>(draft.questions[0]?.id ?? null);
   const [tab, setTab] = useState<Tab>("questions");
   const [saved, setSaved] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -107,7 +108,11 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
   };
 
   const save = async () => {
-    const publishedDraft = { ...draft, published: true };
+    const publishedDraft = {
+      ...draft,
+      published: true,
+      updatedAt: Date.now(),
+    };
     setDraft(publishedDraft);
     setSaveError("");
     try {
@@ -120,13 +125,33 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
   };
 
   const preview = async () => {
-    const publishedDraft = { ...draft, published: true };
+    const publishedDraft = {
+      ...draft,
+      published: true,
+      updatedAt: Date.now(),
+    };
     setDraft(publishedDraft);
     setSaveError("");
     try {
       await onPreview(publishedDraft);
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : "Không thể xem trước.");
+    }
+  };
+
+  const saveDraftNow = async () => {
+    setSavingDraft(true);
+    setSaveError("");
+    try {
+      await saveQuizDraft(quizId, draft);
+      setDraftSaved(true);
+      window.setTimeout(() => setDraftSaved(false), 1600);
+    } catch (cause) {
+      setSaveError(
+        cause instanceof Error ? cause.message : "Không thể lưu bản nháp.",
+      );
+    } finally {
+      setSavingDraft(false);
     }
   };
 
@@ -189,6 +214,19 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
               disabled={validationErrors.length > 0}
             >
               <Eye size={16} /> Xem trước
+            </button>
+            <button
+              type="button"
+              className="secondary-button hidden sm:flex"
+              onClick={() => void saveDraftNow()}
+              disabled={savingDraft}
+            >
+              {draftSaved ? <Check size={16} /> : <Save size={16} />}
+              {draftSaved
+                ? "Đã lưu nháp"
+                : savingDraft
+                  ? "Đang lưu..."
+                  : "Lưu bản nháp"}
             </button>
             <button type="button" className="primary-button" onClick={save} disabled={validationErrors.length > 0}>
               {saved ? <Check size={16} /> : <Save size={16} />}

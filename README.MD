@@ -27,8 +27,9 @@ Chạy lần lượt trong Supabase SQL Editor:
 1. `supabase/migrations/202606250001_initial_schema.sql`
 2. `supabase/migrations/202606250002_multi_tenant_quizzes.sql`
 3. `supabase/migrations/202606250003_ai_quota.sql`
+4. `supabase/migrations/202606250004_secure_attempt_submission.sql`
 
-Các migration tạo Auth, RLS, Storage, kho đề riêng cho từng Admin, link học viên, kết quả và quota AI.
+Migration 004 là bắt buộc trước khi deploy phiên bản này: đề công khai không còn lộ đáp án và kết quả được chấm trực tiếp trong database.
 
 ## AI Quiz Copilot
 
