@@ -1,6 +1,6 @@
 # Smart Practice
 
-Nền tảng tạo và làm bài thi Listening & Reading, dùng React, TypeScript, Tailwind CSS và Supabase.
+Nền tảng tạo và làm bài thi Listening & Reading bằng React, TypeScript, Tailwind CSS, Supabase và Groq.
 
 ## Chạy dự án
 
@@ -10,81 +10,43 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Cấu hình `.env.local`:
+Biến môi trường:
 
 ```env
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-or-publishable-key
+GROQ_API_KEY=your-server-side-groq-key
 ```
 
-Không commit `.env.local` hoặc `service_role` key.
+Không commit `.env.local`, `service_role` hoặc Groq API key. `GROQ_API_KEY` chỉ được cấu hình phía server/Vercel, không thêm tiền tố `VITE_`.
 
-## Thiết lập Supabase bắt buộc
+## Migration Supabase
 
-Project hiện tại: `xftaluzvnxhizdeckvuu`.
+Chạy lần lượt trong Supabase SQL Editor:
 
-1. Mở Supabase Dashboard → **SQL Editor**.
-2. Tạo query mới.
-3. Sao chép toàn bộ nội dung file:
-   `supabase/migrations/202606250001_initial_schema.sql`.
-4. Chọn **Run**.
-5. Tiếp tục chạy:
-   `supabase/migrations/202606250002_multi_tenant_quizzes.sql`.
-6. Trong Authentication → URL Configuration, thêm URL production và URL local.
-7. Tạo tài khoản Admin từ giao diện web.
+1. `supabase/migrations/202606250001_initial_schema.sql`
+2. `supabase/migrations/202606250002_multi_tenant_quizzes.sql`
+3. `supabase/migrations/202606250003_ai_quota.sql`
 
-Migration tạo:
+Các migration tạo Auth, RLS, Storage, kho đề riêng cho từng Admin, link học viên, kết quả và quota AI.
 
-- Supabase Auth và bảng `profiles`.
-- Phân quyền `admin`/`student`.
-- Bảng draft và đề đã xuất bản.
-- Bảng kết quả bài thi.
-- RLS policies.
-- Storage bucket `quiz-assets`.
-- RPC xuất bản đề.
-- Kho đề riêng theo từng Admin.
-- Link học viên riêng cho từng đề.
-- Cô lập đề và kết quả bằng `owner_id` + RLS.
+## AI Quiz Copilot
 
-## Quy trình Admin
+Trong Studio, mở **Tạo bằng prompt**:
 
-1. Mở `/admin` và đăng nhập.
-2. Tạo một hoặc nhiều đề trong kho đề cá nhân.
-3. Tạo/sửa câu hỏi; ảnh được upload lên Supabase Storage.
-4. Bản nháp tự động đồng bộ lên cloud.
-5. Chọn **Lưu & xuất bản**.
-6. Hệ thống tạo link dạng `/quiz/ma-de` để gửi học viên.
-7. Học viên chỉ thấy trang làm bài và kết quả của link đó.
-8. Xem kết quả riêng từng đề trong mục **Kết quả học viên**.
+- Nhập yêu cầu tự nhiên.
+- Chọn 1–175 câu, ngôn ngữ và độ khó.
+- Chọn Listening/Reading hoặc để AI tự quyết định.
+- Groq tự tạo câu hỏi, đáp án, phương án nhiễu và giải thích.
+- Với bộ 175 câu, AI tự chia batch và áp dụng cấu trúc chuẩn khi chọn chế độ tự động.
 
-## Cấu trúc đề
-
-Admin có ba chế độ:
-
-- **Chuẩn 175Q:** quy tắc mặc định 1–175.
-- **Tùy chỉnh:** thay mốc phần thi, phạm vi chia nhóm, xáo câu/đáp án và passage.
-- **Tự do:** cấu hình độc lập từng câu.
-
-## Kiểm tra production
-
-```bash
-npm run build
-npm run preview
-```
-
-Sau khi chạy migration, nên mở Supabase **Security Advisor** để xác nhận RLS và policies.
+Listening được tạo thêm kịch bản audio; Admin vẫn cần tải file audio thật trước khi xuất bản.
 
 ## Deploy Vercel
 
-1. Import repository GitHub vào Vercel.
-2. Thêm `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY` trong Environment Variables.
-3. Build command: `npm run build`.
-4. Output directory: `dist`.
-5. Thêm domain production vào Supabase Authentication → URL Configuration.
+Thêm ba biến môi trường trên vào Production, Preview và Development. Build command là `npm run build`, output là `dist`.
 
-File `vercel.json` đã cấu hình SPA rewrite và các security headers cơ bản.
-
-URL Configuration khuyến nghị:
+Supabase Authentication URL Configuration:
 
 ```text
 Site URL: https://smart-practice.vercel.app
@@ -93,4 +55,9 @@ https://smart-practice.vercel.app/**
 http://localhost:5173/**
 ```
 
-Email xác nhận Admin sẽ quay về `/admin` trên đúng domain đang sử dụng.
+## Kiểm tra
+
+```bash
+npm run build
+npm audit
+```

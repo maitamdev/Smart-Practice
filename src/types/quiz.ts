@@ -21,6 +21,8 @@ export type QuizQuestion = {
   passage?: string;
   image?: string;
   audio?: string;
+  audioScript?: string;
+  imagePrompt?: string;
   options: QuizOption[];
   correctOptionId: string;
   explanation?: string;

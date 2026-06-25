@@ -163,6 +163,19 @@ export function AdminQuestionEditor({ question, onChange, onDelete }: Props) {
             <p className="mt-2 text-xs text-slate-500">Hỗ trợ MP3, WAV, OGG. Tối đa 10 MB.</p>
           </div>
           {uploadError && <p className="text-xs font-semibold text-red-600">{uploadError}</p>}
+          {question.audioScript && (
+            <label className="mt-4 block">
+              <span className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-blue-700">
+                Kịch bản audio do AI tạo
+              </span>
+              <textarea
+                rows={5}
+                value={question.audioScript}
+                onChange={(event) => patch({ audioScript: event.target.value })}
+                className="w-full rounded-xl border border-blue-200 bg-white p-3 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              />
+            </label>
+          )}
         </div>
       )}
 
@@ -191,6 +204,19 @@ export function AdminQuestionEditor({ question, onChange, onDelete }: Props) {
               {uploadError && <p className="text-xs font-semibold text-red-600">{uploadError}</p>}
             </div>
           </div>
+          {question.imagePrompt && (
+            <label className="mt-3 block">
+              <span className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-blue-700">
+                Mô tả ảnh do AI tạo
+              </span>
+              <textarea
+                rows={3}
+                value={question.imagePrompt}
+                onChange={(event) => patch({ imagePrompt: event.target.value })}
+                className="w-full rounded-xl border border-blue-200 bg-white p-3 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              />
+            </label>
+          )}
         </div>
       )}
 
