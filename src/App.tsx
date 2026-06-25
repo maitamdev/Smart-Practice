@@ -19,7 +19,6 @@ const getPath = () => window.location.pathname.replace(/\/+$/, "") || "/";
 
 export default function App() {
   const [path, setPath] = useState(getPath);
-  const adminAuth = useAdminAuth();
 
   useEffect(() => {
     const handlePopState = () => setPath(getPath());
@@ -36,6 +35,18 @@ export default function App() {
   if (publicMatch) {
     return <LearnerQuizRoute slug={decodeURIComponent(publicMatch[1])} />;
   }
+
+  return <AdminApp path={path} navigate={navigate} />;
+}
+
+function AdminApp({
+  path,
+  navigate,
+}: {
+  path: string;
+  navigate: (path: string) => void;
+}) {
+  const adminAuth = useAdminAuth();
 
   if (path === "/" || path === "/admin") {
     if (adminAuth.loading) return <Loading text="Đang kiểm tra phiên quản trị..." />;

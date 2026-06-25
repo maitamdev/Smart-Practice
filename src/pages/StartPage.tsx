@@ -148,21 +148,21 @@ export function StartPage({
           </div>
         </div>
 
-        {onAdmin && <button
+        <button
           type="button"
           onClick={onToggleTheme}
           className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow sm:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
           aria-label="Đổi giao diện"
         >
           {theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
-        </button>}
-        <button
+        </button>
+        {onAdmin && <button
           type="button"
           onClick={onAdmin}
           className="absolute bottom-5 right-5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 shadow-sm transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
           <Settings size={15} /> Quản trị đề thi
-        </button>
+        </button>}
       </section>
     </main>
   );

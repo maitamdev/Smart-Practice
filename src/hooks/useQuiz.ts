@@ -17,7 +17,9 @@ const emptyAttempt: StoredAttempt = {
 export function useQuiz(config: QuizConfig) {
   const [attempt, setAttempt] = useState<StoredAttempt>(() => {
     const saved = loadAttempt();
-    return saved?.quizId === config.id ? saved : emptyAttempt;
+    if (saved?.quizId === config.id) return saved;
+    if (saved) clearAttempt();
+    return emptyAttempt;
   });
 
   useEffect(() => {

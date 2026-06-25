@@ -7,6 +7,10 @@ const THEME_KEY = "smart-practice-175q-theme";
 export function loadAttempt(): StoredAttempt | null {
   try {
     const value = localStorage.getItem(ATTEMPT_KEY);
+    if (!value || value.length > 5_000_000) {
+      if (value) localStorage.removeItem(ATTEMPT_KEY);
+      return null;
+    }
     return value ? (JSON.parse(value) as StoredAttempt) : null;
   } catch {
     return null;
