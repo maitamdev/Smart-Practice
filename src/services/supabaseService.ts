@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import type { AdminAccount } from "../types/auth";
 import type { QuizConfig, QuizResult, UserAnswers } from "../types/quiz";
+import { defaultQuizConfig } from "../data/questions";
 
 const ASSET_BUCKET = "quiz-assets";
 
@@ -92,10 +93,21 @@ export async function loadPublishedQuiz(slug: string): Promise<QuizConfig | null
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
+  const saved = data.config as Partial<QuizConfig>;
   return {
-    ...(data.config as QuizConfig),
+    ...defaultQuizConfig,
+    ...saved,
     id: data.id,
     published: true,
+    questions: saved.questions ?? [],
+    structure: {
+      ...defaultQuizConfig.structure,
+      ...(saved.structure ?? {}),
+    },
+    experience: {
+      ...defaultQuizConfig.experience,
+      ...(saved.experience ?? {}),
+    },
   };
 }
 

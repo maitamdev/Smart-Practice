@@ -146,15 +146,33 @@ function LearnerQuizRoute({ slug }: { slug: string }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      if (!active) return;
+      setError("Tải đề thi quá thời gian. Vui lòng kiểm tra mạng và thử lại.");
+      setLoading(false);
+    }, 12000);
+
     loadPublishedQuiz(slug)
       .then((published) => {
+        if (!active) return;
         if (!published) setError("Link đề thi không tồn tại hoặc đã bị gỡ.");
         else setConfig(published);
       })
-      .catch((cause) =>
-        setError(cause instanceof Error ? cause.message : "Không thể tải đề thi."),
-      )
-      .finally(() => setLoading(false));
+      .catch((cause) => {
+        if (active) {
+          setError(cause instanceof Error ? cause.message : "Không thể tải đề thi.");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+        window.clearTimeout(timeout);
+      });
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
   }, [slug]);
 
   if (loading) return <Loading text="Đang tải đề thi..." />;
