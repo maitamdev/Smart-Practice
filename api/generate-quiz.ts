@@ -1,5 +1,6 @@
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "openai/gpt-oss-120b";
+const PRIMARY_MODEL = "llama-3.3-70b-versatile";
+const FALLBACK_MODEL = "llama-3.1-8b-instant";
 
 const questionSchema = {
   type: "object",
@@ -174,35 +175,45 @@ Quy tắc:
 - explanation giải thích ngắn gọn tại sao đáp án đúng.
 - Không tự nhận là AI, không thêm markdown.`;
 
-      const groqResponse = await fetch(GROQ_API_URL, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${apiKey}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: prompt },
-          ],
-          temperature: 0.45,
-          max_completion_tokens: 12000,
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "quiz_generation",
-              strict: true,
-              schema: questionSchema,
-            },
+      const callGroq = (model: string) =>
+        fetch(GROQ_API_URL, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${apiKey}`,
+            "content-type": "application/json",
           },
-        }),
-      });
+          body: JSON.stringify({
+            model,
+            messages: [
+              {
+                role: "system",
+                content: `${system}
+Bạn phải trả về một JSON object hợp lệ theo cấu trúc:
+{"questions":[{"section":"listening|reading","type":"image_fixed|abc_fixed|abc_blank_fixed|normal","question":"","passage":"","audioScript":"","imagePrompt":"","options":[""],"correctOptionIndex":0,"explanation":""}],"assistantMessage":""}
+Không thêm markdown hoặc văn bản ngoài JSON.`,
+              },
+              { role: "user", content: prompt },
+            ],
+            temperature: 0.35,
+            max_completion_tokens: 5000,
+            response_format: { type: "json_object" },
+          }),
+        });
 
-      const payload = await groqResponse.json() as {
+      let groqResponse = await callGroq(PRIMARY_MODEL);
+      let payload = await groqResponse.json() as {
         error?: { message?: string };
         choices?: Array<{ message?: { content?: string } }>;
       };
+      if (
+        !groqResponse.ok &&
+        (groqResponse.status === 429 ||
+          payload.error?.message?.toLowerCase().includes("rate limit") ||
+          payload.error?.message?.toLowerCase().includes("request too large"))
+      ) {
+        groqResponse = await callGroq(FALLBACK_MODEL);
+        payload = await groqResponse.json() as typeof payload;
+      }
       if (!groqResponse.ok) {
         return Response.json(
           { error: payload.error?.message || "Groq không thể tạo đề." },
@@ -212,7 +223,16 @@ Quy tắc:
 
       const content = payload.choices?.[0]?.message?.content;
       if (!content) throw new Error("Groq trả về nội dung rỗng.");
-      return Response.json(JSON.parse(content));
+      const parsed = JSON.parse(content) as {
+        questions?: unknown[];
+        assistantMessage?: string;
+      };
+      if (!Array.isArray(parsed.questions) || parsed.questions.length !== count) {
+        throw new Error(
+          `AI tạo ${parsed.questions?.length ?? 0}/${count} câu. Vui lòng thử lại.`,
+        );
+      }
+      return Response.json(parsed);
     } catch (cause) {
       return Response.json(
         { error: cause instanceof Error ? cause.message : "Lỗi tạo đề bằng AI." },

@@ -33,10 +33,23 @@ export type AiGeneratedQuestion = QuizQuestion & {
 };
 
 function toQuizQuestion(question: AiQuestion, id: number): AiGeneratedQuestion {
+  const validSections: Section[] = ["listening", "reading"];
+  const validTypes: QuestionType[] = [
+    "image_fixed",
+    "abc_fixed",
+    "abc_blank_fixed",
+    "normal",
+  ];
+  const section = validSections.includes(question.section)
+    ? question.section
+    : "reading";
+  const type = validTypes.includes(question.type) ? question.type : "normal";
   const labels = ["A", "B", "C", "D"] as const;
   const expectedCount =
-    question.type === "abc_fixed" || question.type === "abc_blank_fixed" ? 3 : 4;
-  const sourceOptions = question.options.slice(0, expectedCount);
+    type === "abc_fixed" || type === "abc_blank_fixed" ? 3 : 4;
+  const sourceOptions = Array.isArray(question.options)
+    ? question.options.slice(0, expectedCount).map(String)
+    : [];
   while (sourceOptions.length < expectedCount) sourceOptions.push("");
   const options: QuizOption[] = sourceOptions.map((text, index) => ({
     id: `q${id}-${crypto.randomUUID()}-${index}`,
@@ -50,20 +63,20 @@ function toQuizQuestion(question: AiQuestion, id: number): AiGeneratedQuestion {
   return {
     id,
     originalNumber: id,
-    section: question.section,
-    type: question.type,
-    question: question.question,
-    passage: question.passage,
+    section,
+    type,
+    question: String(question.question ?? ""),
+    passage: String(question.passage ?? ""),
     image: "",
     audio: "",
-    audioScript: question.audioScript,
-    imagePrompt: question.imagePrompt,
+    audioScript: String(question.audioScript ?? ""),
+    imagePrompt: String(question.imagePrompt ?? ""),
     options,
     correctOptionId: options[correctIndex].id,
-    explanation: question.explanation,
+    explanation: String(question.explanation ?? ""),
     shuffleQuestion:
-      question.type === "normal" && question.section !== "listening",
-    shuffleOptions: question.type === "normal",
+      type === "normal" && section !== "listening",
+    shuffleOptions: type === "normal",
   };
 }
 
@@ -102,7 +115,8 @@ export async function generateQuizWithAi(
   startingId: number,
   onProgress?: (done: number, total: number) => void,
 ): Promise<{ questions: AiGeneratedQuestion[]; message: string }> {
-  const batchSize = 20;
+  // Small batches keep each request below free/on-demand Groq token limits.
+  const batchSize = 6;
   const totalBatches = Math.ceil(request.count / batchSize);
   const generated: AiGeneratedQuestion[] = [];
   let message = "";

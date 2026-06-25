@@ -819,7 +819,7 @@ function PromptBuilder({ nextId, onGenerate }: { nextId: number; onGenerate: (qu
           </span>
           <div>
             <h2 className="font-black">AI Quiz Copilot</h2>
-            <p className="text-xs text-blue-100">Powered by Groq · GPT-OSS 120B</p>
+            <p className="text-xs text-blue-100">Powered by Groq · Llama 3.3 70B</p>
           </div>
         </div>
         <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-3 py-1 text-[10px] font-bold text-emerald-100">
