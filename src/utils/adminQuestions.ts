@@ -22,6 +22,7 @@ export function createEmptyQuestion(
     question: "",
     passage: "",
     image: "",
+    audio: "",
     options,
     correctOptionId: options[0].id,
     explanation: "",

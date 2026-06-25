@@ -1,6 +1,7 @@
 import { CheckCircle2, CircleDashed, XCircle } from "lucide-react";
 import type { QuizQuestion, UserAnswers } from "../types/quiz";
 import { getReviewStatus } from "../utils/score";
+import { AudioPlayer } from "./AudioPlayer";
 
 type ResultReviewProps = {
   question: QuizQuestion;
@@ -37,6 +38,11 @@ export function ResultReview({ question, answers, displayNumber, showExplanation
       {question.passage && (
         <div className="mb-5 rounded-xl bg-cyan-50 p-4 text-sm leading-6 text-slate-700 dark:bg-cyan-950/20 dark:text-slate-300">
           {question.passage}
+        </div>
+      )}
+      {question.audio && (
+        <div className="mb-5">
+          <AudioPlayer src={question.audio} compact />
         </div>
       )}
       <h3 className="mb-4 font-bold leading-7 text-slate-900 dark:text-white">

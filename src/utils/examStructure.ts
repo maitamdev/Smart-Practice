@@ -52,6 +52,7 @@ export function applyExamStructure(
       question: isBlankAbc ? "" : existing.question,
       passage: isListening ? "" : existing.passage,
       image: isImage ? existing.image : "",
+      audio: isListening ? existing.audio : "",
       options: isQuestionSeven || isBlankAbc
         ? options.map((option) => ({ ...option, text: "" }))
         : options,

@@ -104,7 +104,7 @@ export function AdminAuthPage({
         <ArrowLeft size={17} /> Về trang chủ
       </button>
 
-      <section className="relative z-10 grid w-full max-w-[1230px] overflow-hidden rounded-[30px] border border-white/80 bg-white shadow-[0_35px_100px_-45px_rgba(15,45,110,.45)] dark:border-slate-800 dark:bg-slate-900 lg:grid-cols-[.96fr_1.04fr]">
+      <section className="relative z-10 grid w-full max-w-[1230px] overflow-hidden rounded-[30px] border border-white/80 bg-white shadow-[0_35px_100px_-45px_rgba(15,45,110,.45)] lg:grid-cols-[.96fr_1.04fr]">
         <aside className="relative hidden min-h-[700px] overflow-hidden bg-gradient-to-br from-[#071b3a] via-[#073b91] to-[#075ff0] p-12 text-white lg:flex lg:flex-col">
           <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.12)_1px,transparent_1px)] [background-size:80px_80px]" />
           <div className="relative">
@@ -134,7 +134,7 @@ export function AdminAuthPage({
           </div>
         </aside>
 
-        <div className="flex min-h-[700px] flex-col justify-center p-7 sm:p-12 lg:p-16">
+        <div className="flex min-h-[700px] flex-col justify-center bg-white p-7 sm:p-12 lg:p-16">
           <p className="text-right text-xs font-semibold text-slate-500">Nền tảng dành cho nhà sáng tạo</p>
           <div className="mt-12">
             <p className="text-xs font-extrabold uppercase tracking-[.22em] text-blue-600">Smart Practice Admin</p>

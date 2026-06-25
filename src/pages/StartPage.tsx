@@ -3,8 +3,6 @@ import {
   ClipboardCheck,
   Clock3,
   Headphones,
-  Moon,
-  Sun,
   Settings,
 } from "lucide-react";
 import type { QuizConfig } from "../types/quiz";
@@ -124,38 +122,6 @@ export function StartPage({
           </aside>
         </div>
 
-        <div className="absolute right-8 top-9 hidden text-center sm:block lg:right-[5.5%]">
-          <p className="mb-3 text-[16px] font-medium text-[#0b1834] dark:text-slate-200">Chọn giao diện</p>
-          <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-800">
-            <button
-              type="button"
-              onClick={theme === "dark" ? onToggleTheme : undefined}
-              className={`flex h-14 items-center gap-3 px-7 text-[17px] font-bold transition ${
-                theme === "light" ? "bg-white text-slate-900" : "text-slate-400"
-              }`}
-            >
-              <Sun size={24} /> Sáng
-            </button>
-            <button
-              type="button"
-              onClick={theme === "light" ? onToggleTheme : undefined}
-              className={`flex h-14 items-center gap-3 px-7 text-[17px] font-bold transition ${
-                theme === "dark" ? "bg-[#061632] text-white" : "bg-[#061632] text-white"
-              }`}
-            >
-              <Moon size={23} /> Tối
-            </button>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={onToggleTheme}
-          className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow sm:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-          aria-label="Đổi giao diện"
-        >
-          {theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
-        </button>
         {onAdmin && <button
           type="button"
           onClick={onAdmin}

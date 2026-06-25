@@ -10,10 +10,6 @@
     text-rendering: optimizeLegibility;
   }
 
-  :root.dark {
-    color-scheme: dark;
-  }
-
   html {
     scroll-behavior: smooth;
   }

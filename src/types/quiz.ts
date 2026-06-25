@@ -20,6 +20,7 @@ export type QuizQuestion = {
   question: string;
   passage?: string;
   image?: string;
+  audio?: string;
   options: QuizOption[];
   correctOptionId: string;
   explanation?: string;

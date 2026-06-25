@@ -1,4 +1,4 @@
-import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
+import { Headphones, ImagePlus, LoaderCircle, Trash2, UploadCloud } from "lucide-react";
 import { useState } from "react";
 import { uploadQuizAsset } from "../../services/supabaseService";
 import type { QuestionType, QuizQuestion, Section } from "../../types/quiz";
@@ -19,6 +19,7 @@ const typeLabels: Record<QuestionType, string> = {
 
 export function AdminQuestionEditor({ question, onChange, onDelete }: Props) {
   const [uploading, setUploading] = useState(false);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const patch = (value: Partial<QuizQuestion>) => onChange({ ...question, ...value });
 
@@ -44,6 +45,20 @@ export function AdminQuestionEditor({ question, onChange, onDelete }: Props) {
       setUploadError(cause instanceof Error ? cause.message : "Không thể tải ảnh.");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const uploadAudio = async (file?: File) => {
+    if (!file) return;
+    setUploadingAudio(true);
+    setUploadError("");
+    try {
+      const publicUrl = await uploadQuizAsset(file);
+      patch({ audio: publicUrl });
+    } catch (cause) {
+      setUploadError(cause instanceof Error ? cause.message : "Không thể tải audio.");
+    } finally {
+      setUploadingAudio(false);
     }
   };
 
@@ -99,6 +114,56 @@ export function AdminQuestionEditor({ question, onChange, onDelete }: Props) {
             onChange={(event) => patch({ passage: event.target.value })}
           />
         </label>
+      )}
+
+      {question.section === "listening" && (
+        <div className="admin-field">
+          <div className="flex items-center justify-between gap-3">
+            <span>Audio Listening <strong className="text-red-500">*</strong></span>
+            {question.audio && (
+              <button type="button" className="text-xs font-bold text-red-500 hover:text-red-700" onClick={() => patch({ audio: "" })}>
+                Xóa audio
+              </button>
+            )}
+          </div>
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+            {question.audio ? (
+              <div>
+                <div className="mb-3 flex items-center gap-2 text-sm font-bold text-blue-800 dark:text-blue-300">
+                  <Headphones size={18} /> Audio đã tải lên
+                </div>
+                <audio controls preload="metadata" src={question.audio} className="w-full" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 text-sm text-slate-500">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-800">
+                  <UploadCloud size={21} />
+                </span>
+                <span>Chưa có audio cho câu Listening này.</span>
+              </div>
+            )}
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+              <input
+                value={question.audio ?? ""}
+                placeholder="Dán URL audio MP3/WAV/OGG"
+                onChange={(event) => patch({ audio: event.target.value })}
+              />
+              <label className="secondary-button cursor-pointer">
+                {uploadingAudio ? <LoaderCircle className="animate-spin" size={16} /> : <UploadCloud size={16} />}
+                {uploadingAudio ? "Đang tải..." : "Tải audio"}
+                <input
+                  type="file"
+                  accept="audio/mpeg,audio/wav,audio/ogg,.mp3,.wav,.ogg"
+                  hidden
+                  disabled={uploadingAudio}
+                  onChange={(event) => void uploadAudio(event.target.files?.[0])}
+                />
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">Hỗ trợ MP3, WAV, OGG. Tối đa 10 MB.</p>
+          </div>
+          {uploadError && <p className="text-xs font-semibold text-red-600">{uploadError}</p>}
+        </div>
       )}
 
       {question.type === "image_fixed" && (

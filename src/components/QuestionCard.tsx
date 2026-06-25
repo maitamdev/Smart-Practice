@@ -1,5 +1,6 @@
 import { ImageOff } from "lucide-react";
 import type { QuizQuestion } from "../types/quiz";
+import { AudioPlayer } from "./AudioPlayer";
 
 type QuestionCardProps = {
   question: QuizQuestion;
@@ -20,6 +21,7 @@ export function QuestionCard({
     return (
       <article className="quiz-panel">
         <p className="mb-3 text-sm font-extrabold text-slate-900 dark:text-white">Câu {displayNumber}</p>
+        {question.audio && <div className="mb-5"><AudioPlayer src={question.audio} /></div>}
         <div className="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
           <div>
             <div className="flex min-h-[300px] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-slate-200 via-blue-100 to-cyan-100 dark:from-slate-800 dark:via-blue-950 dark:to-slate-900">
@@ -62,6 +64,7 @@ export function QuestionCard({
   return (
     <article className="min-w-0 px-1 py-2 sm:px-5">
       <p className="mb-5 text-sm font-extrabold text-slate-900 dark:text-white">Câu {displayNumber}</p>
+      {question.audio && <div className="mb-5"><AudioPlayer src={question.audio} compact /></div>}
       {question.question ? (
         <h2 className="mb-5 min-h-10 text-sm font-bold leading-6 text-slate-950 dark:text-white">
           {question.question}

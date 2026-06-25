@@ -793,6 +793,9 @@ function validateConfig(config: QuizConfig): string[] {
       errors.push(`Câu ${index + 1} còn phương án trống`);
     }
     if (question.type === "image_fixed" && !question.image?.trim()) errors.push(`Câu ${index + 1} chưa có hình ảnh`);
+    if (question.section === "listening" && !question.audio?.trim()) {
+      errors.push(`Câu ${index + 1} Listening chưa có audio`);
+    }
   });
   if (config.structure.enabled) {
     const structure = config.structure;
