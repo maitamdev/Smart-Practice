@@ -7,6 +7,7 @@ import {
   signOutAdmin,
   signUpFirstAdmin,
   resendAdminConfirmation,
+  sendAdminPasswordReset,
 } from "../services/supabaseService";
 import type { AdminAccount } from "../types/auth";
 
@@ -75,6 +76,10 @@ export function useAdminAuth() {
     await resendAdminConfirmation(email);
   };
 
+  const resetPassword = async (email: string) => {
+    await sendAdminPasswordReset(email);
+  };
+
   return {
     account,
     authenticated: account?.role === "admin",
@@ -83,5 +88,6 @@ export function useAdminAuth() {
     login,
     logout,
     resendConfirmation,
+    resetPassword,
   };
 }

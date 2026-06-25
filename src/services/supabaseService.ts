@@ -85,6 +85,13 @@ export async function resendAdminConfirmation(email: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function sendAdminPasswordReset(email: string): Promise<void> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/admin`,
+  });
+  if (error) throw error;
+}
+
 export async function loadPublishedQuiz(slug: string): Promise<QuizConfig | null> {
   const { data, error } = await supabase
     .from("shared_quizzes")

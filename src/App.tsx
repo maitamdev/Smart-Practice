@@ -57,6 +57,7 @@ function AdminApp({
           onLogin={adminAuth.login}
           onRegister={adminAuth.register}
           onResendConfirmation={adminAuth.resendConfirmation}
+          onResetPassword={adminAuth.resetPassword}
         />
       );
     }
@@ -79,6 +80,7 @@ function AdminApp({
           onLogin={adminAuth.login}
           onRegister={adminAuth.register}
           onResendConfirmation={adminAuth.resendConfirmation}
+          onResetPassword={adminAuth.resetPassword}
         />
       );
     }

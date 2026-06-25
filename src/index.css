@@ -47,6 +47,22 @@
       radial-gradient(circle at 50% 50%, rgba(91, 145, 221, 0.1), transparent 72%);
   }
 
+  .bg-admin-auth {
+    @apply bg-[#f5f8fc] dark:bg-slate-950;
+    background-image:
+      radial-gradient(circle at 50% 10%, rgba(59, 130, 246, 0.18), transparent 34%),
+      radial-gradient(circle at 8% 84%, rgba(37, 99, 235, 0.09), transparent 28%),
+      radial-gradient(circle at 92% 18%, rgba(99, 102, 241, 0.08), transparent 24%);
+  }
+
+  .admin-auth-input {
+    @apply relative block;
+  }
+
+  .admin-auth-input input {
+    @apply h-14 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-12 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white;
+  }
+
   .reference-start-card {
     @apply relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_20px_55px_-30px_rgba(15,23,42,.28)] dark:border-slate-800 dark:bg-slate-900;
   }
