@@ -37,33 +37,47 @@ const createDisplayGroups = (
     const inReadingGroupRange =
       number >= structure.readingGroupStart &&
       number <= structure.readingGroupEnd;
+    const canGroupReading =
+      question.section === "reading" &&
+      structure.showReadingDividers &&
+      inReadingGroupRange;
+    const canGroupListening =
+      question.section === "listening" &&
+      question.type === "normal" &&
+      structure.showListeningDividers &&
+      inListeningGroupRange;
     const size =
       question.type === "image_fixed"
         ? 1
         : question.section === "reading"
-          ? structure.showReadingDividers && inReadingGroupRange
+          ? canGroupReading
             ? structure.readingGroupSize
             : 1
         : question.type === "abc_fixed" || question.type === "abc_blank_fixed"
           ? 2
-          : structure.showListeningDividers && inListeningGroupRange
+          : canGroupListening
             ? structure.listeningGroupSize
             : 1;
     const group: number[] = [];
     for (let offset = 0; offset < size && index + offset < questions.length; offset += 1) {
       const candidate = questions[index + offset];
-      const sameMode =
+      const sameType =
         candidate.section === question.section &&
-        candidate.type === question.type &&
-        (question.section === "reading"
+        candidate.type === question.type;
+      const candidateInRange =
+        canGroupReading
           ? candidate.originalNumber >= structure.readingGroupStart &&
             candidate.originalNumber <= structure.readingGroupEnd
-          : question.type !== "normal" ||
-            (candidate.originalNumber >= structure.listeningGroupStart &&
-              candidate.originalNumber <= structure.listeningGroupEnd));
+          : canGroupListening
+            ? candidate.originalNumber >= structure.listeningGroupStart &&
+              candidate.originalNumber <= structure.listeningGroupEnd
+            : true;
+      const sameMode = sameType && candidateInRange;
       if (!sameMode) break;
       group.push(index + offset);
     }
+    // Safety guard: every iteration must consume at least one question.
+    if (group.length === 0) group.push(index);
     groups.push(group);
     index += group.length;
   }
