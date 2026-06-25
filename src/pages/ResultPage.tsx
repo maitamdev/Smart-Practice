@@ -121,8 +121,6 @@ export function ResultPage({
               </div>
               <aside className="hidden border-l border-slate-200 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/30 lg:block">
                 <QuestionNavigator
-                  questions={questions}
-                  answers={answers}
                   currentIndex={currentIndex}
                   onNavigate={setCurrentIndex}
                   submitted

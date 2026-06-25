@@ -190,7 +190,10 @@ export function AdminDashboardPage({ adminName, onEditQuiz, onLogout }: Props) {
 
           {error && <div className="mt-5 rounded-xl bg-red-50 p-4 text-sm font-semibold text-red-600">{error}</div>}
           {loading ? (
-            <p className="py-20 text-center font-semibold text-slate-500">Đang tải kho đề...</p>
+            <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-500">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-blue-600 dark:border-slate-600 dark:border-t-blue-500" />
+              <p className="font-medium">Đang tải kho đề...</p>
+            </div>
           ) : (
             <div className="mt-6 grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
               {filtered.map((quiz, index) => (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
   AdminAuthPage,
   AdminPasswordRecoveryPage,
@@ -9,8 +10,8 @@ import { QuizPage } from "./pages/QuizPage";
 import { ResultPage } from "./pages/ResultPage";
 import { StartPage } from "./pages/StartPage";
 import { useAdminAuth } from "./hooks/useAdminAuth";
-import { useQuiz } from "./hooks/useQuiz";
 import { useTheme } from "./hooks/useTheme";
+import { useQuizStore } from "./stores/quizStore";
 import {
   loadPublishedQuiz,
   loadQuizDraft,
@@ -18,38 +19,26 @@ import {
 } from "./services/supabaseService";
 import type { QuizConfig } from "./types/quiz";
 
-const getPath = () => window.location.pathname.replace(/\/+$/, "") || "/";
-
 export default function App() {
-  const [path, setPath] = useState(getPath);
-
-  useEffect(() => {
-    const handlePopState = () => setPath(getPath());
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  const navigate = (nextPath: string) => {
-    window.history.pushState({}, "", nextPath);
-    setPath(getPath());
-  };
-
-  const publicMatch = path.match(/^\/quiz\/([^/]+)$/);
-  if (publicMatch) {
-    return <LearnerQuizRoute slug={decodeURIComponent(publicMatch[1])} />;
-  }
-
-  return <AdminApp path={path} navigate={navigate} />;
+  return (
+    <Routes>
+      <Route path="/quiz/:slug" element={<LearnerQuizRouteWrapper />} />
+      <Route path="/admin" element={<AdminApp />} />
+      <Route path="/admin/quiz/:quizId" element={<AdminEditorRouteWrapper />} />
+      <Route path="/" element={<Navigate to="/admin" replace />} />
+      <Route path="*" element={<NotFoundRoute />} />
+    </Routes>
+  );
 }
 
-function AdminApp({
-  path,
-  navigate,
-}: {
-  path: string;
-  navigate: (path: string) => void;
-}) {
+function LearnerQuizRouteWrapper() {
+  const { slug } = useParams<{ slug: string }>();
+  return <LearnerQuizRoute slug={slug!} />;
+}
+
+function AdminApp() {
   const adminAuth = useAdminAuth();
+  const navigate = useNavigate();
 
   if (adminAuth.recoveryMode) {
     return (
@@ -59,56 +48,56 @@ function AdminApp({
     );
   }
 
-  if (path === "/" || path === "/admin") {
-    if (adminAuth.loading) return <Loading text="Đang kiểm tra phiên quản trị..." />;
-    if (!adminAuth.authenticated) {
-      return (
-        <AdminAuthPage
-          onBack={() => undefined}
-          onLogin={adminAuth.login}
-          onRegister={adminAuth.register}
-          onResendConfirmation={adminAuth.resendConfirmation}
-          onResetPassword={adminAuth.resetPassword}
-        />
-      );
-    }
+  if (adminAuth.loading) return <Loading text="Đang kiểm tra phiên quản trị..." />;
+  if (!adminAuth.authenticated) {
     return (
-      <AdminDashboardPage
-        adminName={adminAuth.account?.displayName || adminAuth.account?.email || "Quản trị viên"}
-        onEditQuiz={(quizId) => navigate(`/admin/quiz/${quizId}`)}
-        onLogout={() => void adminAuth.logout()}
+      <AdminAuthPage
+        onBack={() => undefined}
+        onLogin={adminAuth.login}
+        onRegister={adminAuth.register}
+        onResendConfirmation={adminAuth.resendConfirmation}
+        onResetPassword={adminAuth.resetPassword}
       />
     );
   }
+  return (
+    <AdminDashboardPage
+      adminName={adminAuth.account?.displayName || adminAuth.account?.email || "Quản trị viên"}
+      onEditQuiz={(quizId) => navigate(`/admin/quiz/${quizId}`)}
+      onLogout={() => void adminAuth.logout()}
+    />
+  );
+}
 
-  const editorMatch = path.match(/^\/admin\/quiz\/([0-9a-f-]+)$/i);
-  if (editorMatch) {
-    if (adminAuth.loading) return <Loading text="Đang kiểm tra quyền truy cập..." />;
-    if (!adminAuth.authenticated) {
-      return (
-        <AdminAuthPage
-          onBack={() => navigate("/admin")}
-          onLogin={adminAuth.login}
-          onRegister={adminAuth.register}
-          onResendConfirmation={adminAuth.resendConfirmation}
-          onResetPassword={adminAuth.resetPassword}
-        />
-      );
-    }
-    return (
-      <AdminEditorRoute
-        quizId={editorMatch[1]}
-        adminName={adminAuth.account?.displayName || adminAuth.account?.email || "Quản trị viên"}
-        onBack={() => navigate("/admin")}
-        onLogout={() => {
-          void adminAuth.logout();
-          navigate("/admin");
-        }}
-        onOpenPublic={(slug) => navigate(`/quiz/${slug}`)}
-      />
-    );
+function AdminEditorRouteWrapper() {
+  const adminAuth = useAdminAuth();
+  const navigate = useNavigate();
+  const { quizId } = useParams<{ quizId: string }>();
+
+  if (adminAuth.recoveryMode) {
+    return <Navigate to="/admin" replace />;
+  }
+  if (adminAuth.loading) return <Loading text="Đang kiểm tra quyền truy cập..." />;
+  if (!adminAuth.authenticated) {
+    return <Navigate to="/admin" replace />;
   }
 
+  return (
+    <AdminEditorRoute
+      quizId={quizId!}
+      adminName={adminAuth.account?.displayName || adminAuth.account?.email || "Quản trị viên"}
+      onBack={() => navigate("/admin")}
+      onLogout={() => {
+        void adminAuth.logout();
+        navigate("/admin");
+      }}
+      onOpenPublic={(slug) => navigate(`/quiz/${slug}`)}
+    />
+  );
+}
+
+function NotFoundRoute() {
+  const navigate = useNavigate();
   return <NotFound onHome={() => navigate("/admin")} />;
 }
 
@@ -221,32 +210,22 @@ function LearnerQuizSession({
   onToggleTheme: () => void;
 }) {
   const {
+    initialize,
     attempt,
     startQuiz,
-    answerQuestion,
-    submitQuiz,
     restartQuiz,
-    submitting,
-    submitError,
-  } = useQuiz(config);
+  } = useQuizStore();
   const [quizOpened, setQuizOpened] = useState(false);
+
+  useEffect(() => {
+    initialize(config);
+  }, [config, initialize]);
 
   if (attempt.quizStatus === "in_progress" && quizOpened) {
     return (
       <QuizPage
-        questions={attempt.shuffledQuestions}
-        answers={attempt.userAnswers}
-        endTime={attempt.endTime}
         theme={theme}
         onToggleTheme={onToggleTheme}
-        onAnswer={answerQuestion}
-        onSubmit={submitQuiz}
-        submitting={submitting}
-        submitError={submitError}
-        brandName={config.brandName}
-        brandBadge={config.brandBadge}
-        structure={config.structure}
-        experience={config.experience}
       />
     );
   }
@@ -286,7 +265,8 @@ function LearnerQuizSession({
 
 function Loading({ text }: { text: string }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 font-bold text-slate-500 dark:bg-slate-950">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 font-medium text-slate-500 dark:bg-slate-950 dark:text-slate-400 animate-fade-in">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-blue-600 dark:border-slate-700 dark:border-t-blue-500" />
       {text}
     </div>
   );

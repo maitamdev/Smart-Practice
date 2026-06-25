@@ -1,10 +1,8 @@
 import { X } from "lucide-react";
-import type { QuizQuestion, UserAnswers } from "../types/quiz";
 import { getReviewStatus } from "../utils/score";
+import { useQuizStore } from "../stores/quizStore";
 
 type QuestionNavigatorProps = {
-  questions: QuizQuestion[];
-  answers: UserAnswers;
   currentIndex: number;
   onNavigate: (index: number) => void;
   submitted?: boolean;
@@ -14,8 +12,6 @@ type QuestionNavigatorProps = {
 };
 
 export function QuestionNavigator({
-  questions,
-  answers,
   currentIndex,
   onNavigate,
   submitted = false,
@@ -23,6 +19,7 @@ export function QuestionNavigator({
   onClose,
   allowNavigation = true,
 }: QuestionNavigatorProps) {
+  const { attempt: { shuffledQuestions: questions, userAnswers: answers } } = useQuizStore();
   const content = (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-4 flex items-center justify-between">

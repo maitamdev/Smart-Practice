@@ -8,20 +8,11 @@ import { TimerBadge } from "../components/TimerBadge";
 import { useTimer } from "../hooks/useTimer";
 import type { QuizExperience, QuizQuestion, QuizStructure, UserAnswers } from "../types/quiz";
 
+import { useQuizStore } from "../stores/quizStore";
+
 type QuizPageProps = {
-  questions: QuizQuestion[];
-  answers: UserAnswers;
-  endTime: number | null;
   theme: "light" | "dark";
   onToggleTheme: () => void;
-  onAnswer: (questionId: number, optionId: string) => void;
-  onSubmit: () => void | Promise<void>;
-  submitting: boolean;
-  submitError: string;
-  brandName: string;
-  brandBadge: string;
-  structure: QuizStructure;
-  experience: QuizExperience;
 };
 
 const createDisplayGroups = (
@@ -87,30 +78,33 @@ const createDisplayGroups = (
 };
 
 export function QuizPage({
-  questions,
-  answers,
-  endTime,
   theme,
   onToggleTheme,
-  onAnswer,
-  onSubmit,
-  submitting,
-  submitError,
-  brandName,
-  brandBadge,
-  structure,
-  experience,
 }: QuizPageProps) {
+  const {
+    config,
+    attempt: { shuffledQuestions: questions, userAnswers: answers, endTime },
+    answerQuestion,
+    submitQuiz,
+    submitting,
+    submitError,
+  } = useQuizStore();
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [mobileNavigatorOpen, setMobileNavigatorOpen] = useState(false);
+  
   const answered = useMemo(() => Object.keys(answers).length, [answers]);
-  const handleExpire = useCallback(() => onSubmit(), [onSubmit]);
+  const handleExpire = useCallback(() => void submitQuiz(), [submitQuiz]);
   const remainingSeconds = useTimer(endTime, handleExpire);
+  
   const groups = useMemo(
-    () => createDisplayGroups(questions, structure),
-    [questions, structure],
+    () => (config ? createDisplayGroups(questions, config.structure) : []),
+    [questions, config],
   );
+
+  if (!config) return null;
+  const { brandName, brandBadge, structure, experience } = config;
   const groupIndex = Math.max(0, groups.findIndex((group) => group.includes(currentIndex)));
   const activeGroup = groups[groupIndex] ?? [0];
   const groupStart = activeGroup[0] ?? 0;
@@ -126,10 +120,10 @@ export function QuizPage({
   const requestSubmit = () => {
     if (!canSubmit || submitting) return;
     if (experience.confirmBeforeSubmit) setShowSubmitModal(true);
-    else onSubmit();
+    else void submitQuiz();
   };
   const selectAnswer = (questionId: number, optionId: string) => {
-    onAnswer(questionId, optionId);
+    answerQuestion(questionId, optionId);
     if (experience.autoAdvance && groupIndex < groups.length - 1) {
       window.setTimeout(() => setCurrentIndex(nextStart), 180);
     }
@@ -280,8 +274,6 @@ export function QuizPage({
               <ProgressSummary answered={answered} total={questions.length} />
             </div>}
             <QuestionNavigator
-              questions={questions}
-              answers={answers}
               currentIndex={currentIndex}
               onNavigate={experience.allowQuestionNavigation ? navigateTo : () => undefined}
               allowNavigation={experience.allowQuestionNavigation}
@@ -302,8 +294,6 @@ export function QuizPage({
 
       {experience.showQuestionNavigator && <div className="lg:hidden">
         <QuestionNavigator
-          questions={questions}
-          answers={answers}
           currentIndex={currentIndex}
           onNavigate={experience.allowQuestionNavigation ? navigateTo : () => undefined}
           allowNavigation={experience.allowQuestionNavigation}
@@ -318,7 +308,7 @@ export function QuizPage({
         onCancel={() => setShowSubmitModal(false)}
         onConfirm={() => {
           setShowSubmitModal(false);
-          void onSubmit();
+          void submitQuiz();
         }}
       />
     </main>
