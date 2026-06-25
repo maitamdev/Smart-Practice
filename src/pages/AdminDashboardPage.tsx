@@ -2,6 +2,7 @@ import {
   BookOpenCheck,
   Copy,
   ExternalLink,
+  Pencil,
   LogOut,
   Plus,
   Trash2,
@@ -11,6 +12,7 @@ import {
   createAdminQuiz,
   deleteAdminQuiz,
   listAdminQuizzes,
+  renameAdminQuiz,
   type AdminQuizSummary,
 } from "../services/supabaseService";
 import { defaultQuizConfig } from "../data/questions";
@@ -40,12 +42,14 @@ export function AdminDashboardPage({ adminName, onEditQuiz, onLogout }: Props) {
   useEffect(refresh, []);
 
   const createQuiz = async () => {
+    const title = window.prompt("Nhập tên đề thi:", "Đề thi mới")?.trim();
+    if (!title) return;
     setCreating(true);
     setError("");
     try {
       const created = await createAdminQuiz({
         ...structuredClone(defaultQuizConfig),
-        title: "Đề thi mới",
+        title,
         brandName: adminName || "Smart Practice",
         updatedAt: Date.now(),
       });
@@ -54,6 +58,17 @@ export function AdminDashboardPage({ adminName, onEditQuiz, onLogout }: Props) {
       setError(cause instanceof Error ? cause.message : "Không thể tạo đề.");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const renameQuiz = async (quiz: AdminQuizSummary) => {
+    const title = window.prompt("Đổi tên đề thi:", quiz.title)?.trim();
+    if (!title || title === quiz.title) return;
+    try {
+      await renameAdminQuiz(quiz.id, title);
+      refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể đổi tên đề.");
     }
   };
 
@@ -120,7 +135,10 @@ export function AdminDashboardPage({ adminName, onEditQuiz, onLogout }: Props) {
 
                   <div className="mt-5 grid grid-cols-[1fr_auto] gap-2">
                     <button type="button" className="primary-button" onClick={() => onEditQuiz(quiz.id)}>Thiết kế đề</button>
-                    <button type="button" className="admin-danger-button !px-3" onClick={() => void removeQuiz(quiz)}><Trash2 size={16} /></button>
+                    <div className="flex gap-2">
+                      <button type="button" className="secondary-button !px-3" onClick={() => void renameQuiz(quiz)} title="Đổi tên đề"><Pencil size={16} /></button>
+                      <button type="button" className="admin-danger-button !px-3" onClick={() => void removeQuiz(quiz)} title="Xóa đề"><Trash2 size={16} /></button>
+                    </div>
                   </div>
                 </article>
               );

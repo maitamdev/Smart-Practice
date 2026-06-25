@@ -191,6 +191,36 @@ export async function deleteAdminQuiz(quizId: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function renameAdminQuiz(
+  quizId: string,
+  title: string,
+): Promise<void> {
+  const normalizedTitle = title.trim();
+  if (!normalizedTitle) throw new Error("Tên đề không được để trống.");
+
+  const { data, error } = await supabase
+    .from("admin_quizzes")
+    .select("draft_config")
+    .eq("id", quizId)
+    .single();
+  if (error) throw error;
+
+  const draft = data.draft_config as QuizConfig;
+  const { error: updateError } = await supabase
+    .from("admin_quizzes")
+    .update({
+      title: normalizedTitle,
+      draft_config: {
+        ...draft,
+        title: normalizedTitle,
+        updatedAt: Date.now(),
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", quizId);
+  if (updateError) throw updateError;
+}
+
 export async function uploadQuizAsset(file: File): Promise<string> {
   const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
   const path = `${new Date().getFullYear()}/${crypto.randomUUID()}.${extension}`;
