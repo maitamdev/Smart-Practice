@@ -263,6 +263,25 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
               <button
                 type="button"
                 key={question.id}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("text/plain", index.toString());
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const fromIndex = parseInt(e.dataTransfer.getData("text/plain"), 10);
+                  const toIndex = index;
+                  if (fromIndex === toIndex || isNaN(fromIndex)) return;
+                  const newQuestions = [...draft.questions];
+                  const [moved] = newQuestions.splice(fromIndex, 1);
+                  newQuestions.splice(toIndex, 0, moved);
+                  updateQuestions(newQuestions);
+                }}
                 onClick={() => { setSelectedId(question.id); setTab("questions"); }}
                 className={`group flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
                   selectedId === question.id && tab === "questions"
@@ -270,7 +289,7 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
                     : "border-slate-200 bg-white hover:border-blue-300 dark:border-slate-700 dark:bg-slate-900"
                 }`}
               >
-                <GripVertical size={15} className="shrink-0 text-slate-300 transition group-hover:text-slate-500" />
+                <GripVertical size={15} className="shrink-0 cursor-grab text-slate-300 transition group-hover:text-slate-500 active:cursor-grabbing" />
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${selectedId === question.id && tab === "questions" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800"}`}>
                   {index + 1}
                 </span>
