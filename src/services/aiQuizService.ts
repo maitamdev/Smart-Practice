@@ -85,6 +85,7 @@ async function generateBatch(
   count: number,
   batchNumber: number,
   totalBatches: number,
+  startIndex: number,
 ): Promise<AiResponse> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -102,7 +103,7 @@ async function generateBatch(
       batchNumber,
       totalBatches,
       totalCount: request.count,
-      startIndex: (batchNumber - 1) * 20 + 1,
+      startIndex,
     }),
   });
   const payload = await response.json() as AiResponse & { error?: string };
@@ -123,7 +124,13 @@ export async function generateQuizWithAi(
 
   for (let batch = 0; batch < totalBatches; batch += 1) {
     const count = Math.min(batchSize, request.count - batch * batchSize);
-    const result = await generateBatch(request, count, batch + 1, totalBatches);
+    const result = await generateBatch(
+      request,
+      count,
+      batch + 1,
+      totalBatches,
+      batch * batchSize + 1,
+    );
     result.questions.forEach((question) => {
       generated.push(toQuizQuestion(question, startingId + generated.length));
     });
