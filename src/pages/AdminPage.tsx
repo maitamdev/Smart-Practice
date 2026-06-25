@@ -154,14 +154,14 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 dark:bg-slate-950">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
-        <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6">
+    <main className="min-h-screen bg-[#f4f7fb] dark:bg-slate-950">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+        <div className="flex h-[72px] items-center justify-between gap-4 px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button type="button" className="header-icon" onClick={onExit}><ArrowLeft size={19} /></button>
             <div className="min-w-0">
-              <p className="truncate font-black text-slate-950 dark:text-white">Smart Practice Admin</p>
-              <p className="truncate text-xs text-slate-500">{draft.title}</p>
+              <p className="truncate text-[15px] font-black text-slate-950 dark:text-white">Smart Practice <span className="text-blue-600">Studio</span></p>
+              <p className="truncate text-xs font-semibold text-slate-500">{draft.title}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -200,8 +200,8 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
         </div>
       )}
 
-      <div className="grid min-h-[calc(100vh-64px)] xl:grid-cols-[280px_minmax(0,1fr)_270px]">
-        <aside className="border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="grid min-h-[calc(100vh-72px)] xl:grid-cols-[300px_minmax(0,1fr)_290px]">
+        <aside className="border-r border-slate-200 bg-white shadow-[8px_0_30px_-28px_rgba(15,23,42,.4)] dark:border-slate-800 dark:bg-slate-900">
           <div className="border-b border-slate-200 p-4 dark:border-slate-800">
             <button type="button" className="primary-button w-full" onClick={() => addQuestion()}>
               <Plus size={17} /> Thêm câu hỏi
@@ -217,20 +217,20 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
               <div className="rounded-lg bg-violet-50 p-2 text-violet-700 dark:bg-violet-950/40">Reading <strong>{readingCount}</strong></div>
             </div>
           </div>
-          <div className="navigator-scroll max-h-[calc(100vh-190px)] space-y-2 overflow-y-auto p-3">
+          <div className="navigator-scroll max-h-[calc(100vh-205px)] space-y-2 overflow-y-auto p-3">
             {draft.questions.map((question, index) => (
               <button
                 type="button"
                 key={question.id}
                 onClick={() => { setSelectedId(question.id); setTab("questions"); }}
-                className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
+                className={`group flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
                   selectedId === question.id && tab === "questions"
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
                     : "border-slate-200 bg-white hover:border-blue-300 dark:border-slate-700 dark:bg-slate-900"
                 }`}
               >
-                <GripVertical size={15} className="shrink-0 text-slate-400" />
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-black dark:bg-slate-800">
+                <GripVertical size={15} className="shrink-0 text-slate-300 transition group-hover:text-slate-500" />
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${selectedId === question.id && tab === "questions" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800"}`}>
                   {index + 1}
                 </span>
                 <span className="min-w-0">
@@ -244,8 +244,8 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
           </div>
         </aside>
 
-        <section className="min-w-0 p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
+        <section className="min-w-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,.08),transparent_34%)] p-4 sm:p-7 lg:p-10">
+          <div className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_24px_70px_-36px_rgba(15,23,42,.35)] dark:border-slate-800 dark:bg-slate-900 sm:p-8">
             {tab === "questions" && selected && (
               <AdminQuestionEditor
                 question={selected}
@@ -283,7 +283,7 @@ export function AdminPage({ quizId, initialConfig, onSave, onExit, onPreview, ad
           </div>
         </section>
 
-        <aside className="border-l border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <aside className="border-l border-slate-200 bg-white p-4 shadow-[-8px_0_30px_-28px_rgba(15,23,42,.4)] dark:border-slate-800 dark:bg-slate-900">
           <nav className="grid gap-2">
             <AdminNav active={tab === "questions"} icon={Copy} label="Câu hỏi" onClick={() => setTab("questions")} />
             <AdminNav active={tab === "prompt"} icon={Sparkles} label="Tạo bằng prompt" onClick={() => setTab("prompt")} />

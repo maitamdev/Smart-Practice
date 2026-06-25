@@ -49,10 +49,10 @@ export function AdminQuestionEditor({ question, onChange, onDelete }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-6 dark:border-slate-800">
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-blue-600">Trình soạn câu hỏi</p>
-          <h2 className="mt-1 text-2xl font-black text-slate-950 dark:text-white">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-blue-600">Question Composer</p>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
             Câu {question.originalNumber}
           </h2>
         </div>
